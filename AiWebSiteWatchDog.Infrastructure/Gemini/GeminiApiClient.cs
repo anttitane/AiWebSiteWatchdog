@@ -4,10 +4,11 @@ using System.Net.Http.Json;
 using System.Threading.Tasks;
 using System.Text.Json;
 using Serilog;
+using AiWebSiteWatchDog.Domain.Interfaces;
 
 namespace AiWebSiteWatchDog.Infrastructure.Gemini
 {
-    public class GeminiApiClient
+    public class GeminiApiClient : IGeminiApiClient
     {
         public async Task<string> CheckInterestAsync(string text, string interest, string apiKey)
         {

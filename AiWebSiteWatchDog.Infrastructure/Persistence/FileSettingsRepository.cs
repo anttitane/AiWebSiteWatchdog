@@ -3,11 +3,12 @@ using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
 using AiWebSiteWatchDog.Domain.Entities;
+using AiWebSiteWatchDog.Domain.Interfaces;
 using Serilog;
 
 namespace AiWebSiteWatchDog.Infrastructure.Persistence
 {
-    public class FileSettingsRepository
+    public class FileSettingsRepository : ISettingsRepository
     {
         private readonly string _filePath = "settings.json";
 

@@ -6,19 +6,21 @@ namespace AiWebSiteWatchDog.Application.Services
 {
     public class SettingsService : ISettingsService
     {
-        private UserSettings _settings = new UserSettings();
+        private readonly ISettingsRepository _repository;
 
-        public Task<UserSettings> GetSettingsAsync()
+        public SettingsService(ISettingsRepository repository)
         {
-            // TODO: Load from persistence
-            return Task.FromResult(_settings);
+            _repository = repository;
         }
 
-        public Task SaveSettingsAsync(UserSettings settings)
+        public async Task<UserSettings> GetSettingsAsync()
         {
-            // TODO: Save to persistence
-            _settings = settings;
-            return Task.CompletedTask;
+            return await _repository.LoadAsync();
+        }
+
+        public async Task SaveSettingsAsync(UserSettings settings)
+        {
+            await _repository.SaveAsync(settings);
         }
     }
 }

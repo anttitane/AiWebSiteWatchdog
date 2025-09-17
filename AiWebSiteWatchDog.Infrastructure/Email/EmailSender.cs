@@ -3,11 +3,12 @@ using System.Net;
 using System.Net.Mail;
 using System.Threading.Tasks;
 using AiWebSiteWatchDog.Domain.Entities;
+using AiWebSiteWatchDog.Domain.Interfaces;
 using Serilog;
 
 namespace AiWebSiteWatchDog.Infrastructure.Email
 {
-    public class EmailSender
+    public class EmailSender : IEmailSender
     {
         public async Task SendAsync(Notification notification, EmailSettings emailSettings)
         {

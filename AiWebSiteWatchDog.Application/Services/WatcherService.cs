@@ -1,3 +1,4 @@
+using AiWebSiteWatchDog.Application.Services;
 using System;
 using System.Threading.Tasks;
 using AiWebSiteWatchDog.Domain.Entities;
@@ -7,16 +8,26 @@ namespace AiWebSiteWatchDog.Application.Services
 {
     public class WatcherService : IWatcherService
     {
-        public Task<WatchTask> CheckWebsiteAsync(UserSettings settings)
+        private readonly IGeminiApiClient _geminiApiClient;
+        private readonly ISettingsService _settingsService;
+
+        public WatcherService(IGeminiApiClient geminiApiClient, ISettingsService settingsService)
         {
-            // TODO: Implement website check logic
-            return Task.FromResult(new WatchTask
+            _geminiApiClient = geminiApiClient;
+            _settingsService = settingsService;
+        }
+
+        public async Task<WatchTask> CheckWebsiteAsync(UserSettings settings)
+        {
+            var currentSettings = await _settingsService.GetSettingsAsync();
+            var result = await _geminiApiClient.CheckInterestAsync(settings.WatchUrl, settings.InterestSentence, settings.GeminiApiKey);
+            return new WatchTask
             {
                 Url = settings.WatchUrl,
                 InterestSentence = settings.InterestSentence,
                 LastChecked = DateTime.UtcNow,
-                LastResult = null
-            });
+                LastResult = result
+            };
         }
     }
 }

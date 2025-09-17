@@ -20,11 +20,15 @@ builder.Host.UseSerilog();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// Register infrastructure implementations
+builder.Services.AddSingleton<ISettingsRepository, AiWebSiteWatchDog.Infrastructure.Persistence.FileSettingsRepository>();
+builder.Services.AddSingleton<IEmailSender, AiWebSiteWatchDog.Infrastructure.Email.EmailSender>();
+builder.Services.AddSingleton<IGeminiApiClient, AiWebSiteWatchDog.Infrastructure.Gemini.GeminiApiClient>();
 
-// Register services (implementations to be added later)
-// builder.Services.AddSingleton<IWatcherService, WatcherService>();
-// builder.Services.AddSingleton<INotificationService, NotificationService>();
-// builder.Services.AddSingleton<ISettingsService, SettingsService>();
+// Register application services
+builder.Services.AddSingleton<ISettingsService, AiWebSiteWatchDog.Application.Services.SettingsService>();
+builder.Services.AddSingleton<INotificationService, AiWebSiteWatchDog.Application.Services.NotificationService>();
+builder.Services.AddSingleton<IWatcherService, AiWebSiteWatchDog.Application.Services.WatcherService>();
 
 
 var app = builder.Build();
