@@ -1,7 +1,9 @@
+using System;
 using System.Net;
 using System.Net.Mail;
 using System.Threading.Tasks;
 using AiWebSiteWatchDog.Domain.Entities;
+using Serilog;
 
 namespace AiWebSiteWatchDog.Infrastructure.Email
 {
@@ -15,12 +17,22 @@ namespace AiWebSiteWatchDog.Infrastructure.Email
             message.Subject = notification.Subject;
             message.Body = notification.Message;
 
-            using var client = new SmtpClient(emailSettings.SmtpServer, emailSettings.SmtpPort)
+            try
             {
-                Credentials = new NetworkCredential(emailSettings.SenderEmail, emailSettings.AppPassword),
-                EnableSsl = emailSettings.EnableSsl
-            };
-            await client.SendMailAsync(message);
+                using var client = new SmtpClient(emailSettings.SmtpServer, emailSettings.SmtpPort)
+                {
+                    Credentials = new NetworkCredential(emailSettings.SenderEmail, emailSettings.AppPassword),
+                    EnableSsl = emailSettings.EnableSsl
+                };
+                Log.Information("Sending email to {Email} via {SmtpServer}:{SmtpPort}", notification.Email, emailSettings.SmtpServer, emailSettings.SmtpPort);
+                await client.SendMailAsync(message);
+                Log.Information("Email sent to {Email} with subject '{Subject}'", notification.Email, notification.Subject);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Failed to send email to {Email}", notification.Email);
+                throw;
+            }
         }
     }
 }

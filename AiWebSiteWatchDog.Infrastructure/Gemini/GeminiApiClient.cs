@@ -1,7 +1,9 @@
+using System;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
 using System.Text.Json;
+using Serilog;
 
 namespace AiWebSiteWatchDog.Infrastructure.Gemini
 {
@@ -23,18 +25,28 @@ namespace AiWebSiteWatchDog.Infrastructure.Gemini
                 }
             };
 
-            using var http = new HttpClient();
-            var request = new HttpRequestMessage(HttpMethod.Post, geminiUrl)
+            try
             {
-                Content = JsonContent.Create(geminiBody)
-            };
-            request.Headers.Add("X-goog-api-key", apiKey);
-            request.Headers.Add("Accept", "application/json");
+                using var http = new HttpClient();
+                var request = new HttpRequestMessage(HttpMethod.Post, geminiUrl)
+                {
+                    Content = JsonContent.Create(geminiBody)
+                };
+                request.Headers.Add("X-goog-api-key", apiKey);
+                request.Headers.Add("Accept", "application/json");
 
-            var response = await http.SendAsync(request);
-            response.EnsureSuccessStatusCode();
-            var json = await response.Content.ReadAsStringAsync();
-            return json;
+                Log.Information("Calling Gemini API for interest '{Interest}'", interest);
+                var response = await http.SendAsync(request);
+                response.EnsureSuccessStatusCode();
+                var json = await response.Content.ReadAsStringAsync();
+                Log.Information("Gemini API response received for interest '{Interest}'", interest);
+                return json;
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Gemini API call failed for interest '{Interest}'", interest);
+                throw;
+            }
         }
     }
 }
