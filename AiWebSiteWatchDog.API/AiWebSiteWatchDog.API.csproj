@@ -4,6 +4,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Hangfire.SQLite" Version="1.4.2" />
     <ProjectReference Include="../AiWebSiteWatchDog.Domain/AiWebSiteWatchDog.Domain.csproj" />
     <ProjectReference Include="../AiWebSiteWatchDog.Application/AiWebSiteWatchDog.Application.csproj" />
     <ProjectReference Include="../AiWebSiteWatchDog.Infrastructure/AiWebSiteWatchDog.Infrastructure.csproj" />
