@@ -47,9 +47,9 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
                 else
                 {
                     _dbContext.Entry(existing).CurrentValues.SetValues(settings);
-                    if (settings.EmailSettings != null)
+                    if (settings.EmailSettings != null && existing.EmailSettings != null)
                     {
-                        _dbContext.Entry(existing.EmailSettings).CurrentValues.SetValues(settings.EmailSettings);
+                        _dbContext.Entry(existing.EmailSettings!).CurrentValues.SetValues(settings.EmailSettings);
                     }
                 }
                 await _dbContext.SaveChangesAsync();
