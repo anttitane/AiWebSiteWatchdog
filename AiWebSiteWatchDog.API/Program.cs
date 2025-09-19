@@ -19,7 +19,7 @@ builder.Services.AddHangfire(config =>
 {
     config.UseSimpleAssemblyNameTypeSerializer();
     config.UseRecommendedSerializerSettings();
-    config.UseSQLiteStorage("Data Source=AiWebSiteWatchdog.db");
+    config.UseSQLiteStorage("Data Source=AiWebSiteWatchdog.db;Cache=Shared;Mode=ReadWriteCreate;", new Hangfire.SQLite.SQLiteStorageOptions());
 });
 builder.Services.AddHangfireServer();
 builder.Services.AddSwaggerGen();
