@@ -22,6 +22,7 @@ builder.Services.AddHangfire(config =>
     config.UseSQLiteStorage("Data Source=AiWebSiteWatchdog.db;Cache=Shared;Mode=ReadWriteCreate;", new Hangfire.SQLite.SQLiteStorageOptions());
 });
 builder.Services.AddHangfireServer();
+builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 // Register EF Core DbContext

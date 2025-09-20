@@ -8,7 +8,7 @@
     <ProjectReference Include="../AiWebSiteWatchDog.Domain/AiWebSiteWatchDog.Domain.csproj" />
     <ProjectReference Include="../AiWebSiteWatchDog.Application/AiWebSiteWatchDog.Application.csproj" />
     <ProjectReference Include="../AiWebSiteWatchDog.Infrastructure/AiWebSiteWatchDog.Infrastructure.csproj" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
+  <PackageReference Include="Swashbuckle.AspNetCore" Version="7.1.0" />
     <PackageReference Include="Serilog.AspNetCore" Version="8.0.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
   </ItemGroup>
