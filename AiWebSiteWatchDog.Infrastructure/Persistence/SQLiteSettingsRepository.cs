@@ -6,15 +6,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiWebSiteWatchDog.Infrastructure.Persistence
 {
-    public class SQLiteSettingsRepository : ISettingsRepository
+    public class SQLiteSettingsRepository(AppDbContext _dbContext) : ISettingsRepository
     {
-        private readonly AppDbContext _dbContext;
-
-        public SQLiteSettingsRepository(AppDbContext dbContext)
-        {
-            _dbContext = dbContext;
-        }
-
         public async Task<UserSettings> LoadAsync()
         {
             try
@@ -23,7 +16,15 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
                 if (settings == null)
                 {
                     Log.Warning("No settings found in database, returning default settings.");
-                    return new UserSettings();
+                    return new UserSettings(
+                        email: string.Empty,
+                        geminiApiKey: string.Empty,
+                        watchUrl: string.Empty,
+                        interestSentence: string.Empty,
+                        schedule: string.Empty,
+                        emailSettingsId: 0,
+                        emailSettings: null
+                    );
                 }
                 Log.Information("Settings loaded successfully from database.");
                 return settings;

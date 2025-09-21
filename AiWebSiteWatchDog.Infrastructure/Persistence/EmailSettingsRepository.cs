@@ -5,15 +5,8 @@ using Serilog;
 
 namespace AiWebSiteWatchDog.Infrastructure.Persistence
 {
-    public class EmailSettingsRepository
+    public class EmailSettingsRepository(AppDbContext _dbContext)
     {
-        private readonly AppDbContext _dbContext;
-
-        public EmailSettingsRepository(AppDbContext dbContext)
-        {
-            _dbContext = dbContext;
-        }
-
         public async Task<EmailSettings?> GetAsync(string senderEmail)
         {
             return await _dbContext.EmailSettings.FirstOrDefaultAsync(e => e.SenderEmail == senderEmail);

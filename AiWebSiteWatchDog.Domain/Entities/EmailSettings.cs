@@ -1,13 +1,13 @@
 namespace AiWebSiteWatchDog.Domain.Entities
 {
-    public class EmailSettings
+    public class EmailSettings(int id, string smtpServer, int smtpPort, string senderEmail, string senderName, string appPassword, bool enableSsl)
     {
-        public int Id { get; set; } // EF Core primary key
-        public string SmtpServer { get; set; } = "smtp.gmail.com";
-        public int SmtpPort { get; set; } = 587;
-        public string SenderEmail { get; set; } = string.Empty;
-        public string SenderName { get; set; } = "AiWebSiteWatchdog";
-        public string AppPassword { get; set; } = string.Empty;
-        public bool EnableSsl { get; set; } = true;
+        public int Id { get; set; } = id;
+        public string SmtpServer { get; set; } = smtpServer;
+        public int SmtpPort { get; set; } = smtpPort;
+        public string SenderEmail { get; set; } = senderEmail;
+        public string SenderName { get; set; } = senderName;
+        public string AppPassword { get; set; } = appPassword;
+        public bool EnableSsl { get; set; } = enableSsl;
     }
 }

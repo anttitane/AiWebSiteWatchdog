@@ -2,12 +2,12 @@ using System;
 
 namespace AiWebSiteWatchDog.Domain.Entities
 {
-    public class WatchTask
+    public class WatchTask(int id, string url, string interestSentence, DateTime lastChecked, string? lastResult)
     {
-        public int Id { get; set; } // EF Core primary key
-        public string Url { get; set; } = string.Empty;
-        public string InterestSentence { get; set; } = string.Empty;
-        public DateTime LastChecked { get; set; }
-        public string? LastResult { get; set; }
+        public int Id { get; set; } = id;
+        public string Url { get; set; } = url;
+        public string InterestSentence { get; set; } = interestSentence;
+        public DateTime LastChecked { get; set; } = lastChecked;
+        public string? LastResult { get; set; } = lastResult;
     }
 }

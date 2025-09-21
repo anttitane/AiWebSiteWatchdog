@@ -70,7 +70,16 @@ namespace AiWebSiteWatchDog.API
             {
                 var task = await repo.GetByIdAsync(id);
                 if (task is null) return Results.NotFound();
-                var settings = new UserSettings { WatchUrl = task.Url, InterestSentence = task.InterestSentence };
+                // Provide dummy/default values for required UserSettings constructor parameters
+                var settings = new UserSettings(
+                    email: "dummy@example.com",
+                    geminiApiKey: string.Empty,
+                    watchUrl: task.Url,
+                    interestSentence: task.InterestSentence,
+                    schedule: string.Empty,
+                    emailSettingsId: 0,
+                    emailSettings: null
+                );
                 var result = await watcherService.CheckWebsiteAsync(settings);
                 return Results.Ok(result);
             });

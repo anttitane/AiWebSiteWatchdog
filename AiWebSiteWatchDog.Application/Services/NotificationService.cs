@@ -5,16 +5,10 @@ using System;
 
 namespace AiWebSiteWatchDog.Application.Services
 {
-    public class NotificationService : INotificationService
+    public class NotificationService(IEmailSender emailSender, ISettingsService settingsService) : INotificationService
     {
-    private readonly IEmailSender _emailSender;
-        private readonly ISettingsService _settingsService;
-
-        public NotificationService(IEmailSender emailSender, ISettingsService settingsService)
-        {
-            _emailSender = emailSender;
-            _settingsService = settingsService;
-        }
+        private readonly IEmailSender _emailSender = emailSender;
+        private readonly ISettingsService _settingsService = settingsService;
 
         public async Task SendNotificationAsync(Notification notification)
         {

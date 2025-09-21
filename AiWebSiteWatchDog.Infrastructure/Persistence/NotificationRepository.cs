@@ -6,15 +6,8 @@ using Serilog;
 
 namespace AiWebSiteWatchDog.Infrastructure.Persistence
 {
-    public class NotificationRepository
+    public class NotificationRepository(AppDbContext _dbContext)
     {
-        private readonly AppDbContext _dbContext;
-
-        public NotificationRepository(AppDbContext dbContext)
-        {
-            _dbContext = dbContext;
-        }
-
         public async Task<List<Notification>> GetAllAsync()
         {
             return await _dbContext.Notifications.ToListAsync();

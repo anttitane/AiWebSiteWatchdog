@@ -8,7 +8,7 @@ using AiWebSiteWatchDog.Domain.Interfaces;
 
 namespace AiWebSiteWatchDog.Infrastructure.Gemini
 {
-    public class GeminiApiClient : IGeminiApiClient
+    public class GeminiApiClient() : IGeminiApiClient
     {
         public async Task<string> CheckInterestAsync(string text, string interest, string apiKey)
         {

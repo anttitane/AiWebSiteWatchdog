@@ -2,12 +2,12 @@ using System;
 
 namespace AiWebSiteWatchDog.Domain.Entities
 {
-    public class Notification
+    public class Notification(int id, string email, string subject, string message, DateTime sentAt)
     {
-        public int Id { get; set; } // EF Core primary key
-        public string Email { get; set; } = string.Empty;
-        public string Subject { get; set; } = string.Empty;
-        public string Message { get; set; } = string.Empty;
-        public DateTime SentAt { get; set; }
+        public int Id { get; set; } = id;
+        public string Email { get; set; } = email;
+        public string Subject { get; set; } = subject;
+        public string Message { get; set; } = message;
+        public DateTime SentAt { get; set; } = sentAt;
     }
 }

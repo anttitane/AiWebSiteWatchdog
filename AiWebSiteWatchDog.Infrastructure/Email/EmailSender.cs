@@ -8,7 +8,7 @@ using Serilog;
 
 namespace AiWebSiteWatchDog.Infrastructure.Email
 {
-    public class EmailSender : IEmailSender
+    public class EmailSender() : IEmailSender
     {
         public async Task SendAsync(Notification notification, EmailSettings emailSettings)
         {

@@ -6,15 +6,8 @@ using Serilog;
 
 namespace AiWebSiteWatchDog.Infrastructure.Persistence
 {
-    public class WatchTaskRepository
+    public class WatchTaskRepository(AppDbContext _dbContext)
     {
-        private readonly AppDbContext _dbContext;
-
-        public WatchTaskRepository(AppDbContext dbContext)
-        {
-            _dbContext = dbContext;
-        }
-
         public async Task<List<WatchTask>> GetAllAsync()
         {
             return await _dbContext.WatchTasks.ToListAsync();

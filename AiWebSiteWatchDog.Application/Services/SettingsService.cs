@@ -4,14 +4,9 @@ using AiWebSiteWatchDog.Domain.Interfaces;
 
 namespace AiWebSiteWatchDog.Application.Services
 {
-    public class SettingsService : ISettingsService
+    public class SettingsService(ISettingsRepository repository) : ISettingsService
     {
-        private readonly ISettingsRepository _repository;
-
-        public SettingsService(ISettingsRepository repository)
-        {
-            _repository = repository;
-        }
+        private readonly ISettingsRepository _repository = repository;
 
         public async Task<UserSettings> GetSettingsAsync()
         {
