@@ -38,9 +38,9 @@ builder.Services.AddSingleton<IEmailSender, AiWebSiteWatchDog.Infrastructure.Ema
 builder.Services.AddSingleton<IGeminiApiClient, AiWebSiteWatchDog.Infrastructure.Gemini.GeminiApiClient>();
 
 // Register application services
-builder.Services.AddSingleton<ISettingsService, AiWebSiteWatchDog.Application.Services.SettingsService>();
-builder.Services.AddSingleton<INotificationService, AiWebSiteWatchDog.Application.Services.NotificationService>();
-builder.Services.AddSingleton<IWatcherService, AiWebSiteWatchDog.Application.Services.WatcherService>();
+builder.Services.AddScoped<ISettingsService, AiWebSiteWatchDog.Application.Services.SettingsService>();
+builder.Services.AddScoped<INotificationService, AiWebSiteWatchDog.Application.Services.NotificationService>();
+builder.Services.AddScoped<IWatcherService, AiWebSiteWatchDog.Application.Services.WatcherService>();
 
 var app = builder.Build();
 
@@ -51,12 +51,15 @@ app.UseHangfireDashboard();
 AiWebSiteWatchDog.Infrastructure.Persistence.DbInitializer.EnsureMigrated(app.Services);
 
 // Schedule the watch task using Hangfire
-var watcherService = app.Services.GetRequiredService<IWatcherService>();
-var settingsService = app.Services.GetRequiredService<ISettingsService>();
-var settings = settingsService.GetSettingsAsync().GetAwaiter().GetResult();
-if (!string.IsNullOrWhiteSpace(settings?.Schedule))
+using (var scope = app.Services.CreateScope())
 {
-    RecurringJob.AddOrUpdate("WatchTaskJob", () => watcherService.CheckWebsiteAsync(settings), settings.Schedule);
+    var watcherService = scope.ServiceProvider.GetRequiredService<IWatcherService>();
+    var settingsService = scope.ServiceProvider.GetRequiredService<ISettingsService>();
+    var settings = settingsService.GetSettingsAsync().GetAwaiter().GetResult();
+    if (!string.IsNullOrWhiteSpace(settings?.Schedule))
+    {
+        RecurringJob.AddOrUpdate("WatchTaskJob", () => watcherService.CheckWebsiteAsync(settings), settings.Schedule);
+    }
 }
 
 // Enable Swagger middleware
