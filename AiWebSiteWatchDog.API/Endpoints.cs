@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using AiWebSiteWatchDog.Domain.Entities;
 using AiWebSiteWatchDog.Domain.Interfaces;
-using AiWebSiteWatchDog.Infrastructure.Persistence;
 
 namespace AiWebSiteWatchDog.API
 {
