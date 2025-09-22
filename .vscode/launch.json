@@ -5,13 +5,13 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": ".NET Launch console App",
+            "name": ".NET Launch API project",
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/AiWebSiteWatchDog.PoC/bin/Debug/net8.0/AiWebSiteWatchDog.PoC.dll",
-            "args": [],
-            "cwd": "${workspaceFolder}/AiWebSiteWatchDog.PoC",
+            "program": "${workspaceFolder}/AiWebSiteWatchDog.API/bin/Debug/net8.0/AiWebSiteWatchDog.API.dll",
+            "args": ["--urls", "http://localhost:5050"],
+            "cwd": "${workspaceFolder}/AiWebSiteWatchDog.API",
             "stopAtEntry": false,
             "console": "internalConsole"
         }

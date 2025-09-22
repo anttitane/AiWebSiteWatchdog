@@ -38,6 +38,11 @@ ScaffoldingReadMe.txt
 
 # Others
 ~$*
+
+# SQLite database files
+*.db
+*.db-shm
+*.db-wal
 *~
 CodeCoverage/
 
@@ -52,3 +57,6 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+#Visual Studio
+.vs/
