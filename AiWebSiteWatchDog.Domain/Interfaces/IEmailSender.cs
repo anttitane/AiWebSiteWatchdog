@@ -5,6 +5,6 @@ namespace AiWebSiteWatchDog.Domain.Interfaces
 {
     public interface IEmailSender
     {
-        Task SendAsync(Notification notification, EmailSettings emailSettings);
+    Task SendAsync(Notification notification, EmailSettings emailSettings, string recipientEmail);
     }
 }
