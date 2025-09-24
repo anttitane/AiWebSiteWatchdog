@@ -100,6 +100,14 @@ namespace AiWebSiteWatchDog.API
                 return result ? Results.Ok() : Results.NotFound();
             });
 
+            // Send notification (trigger email)
+            app.MapPost("/notifications", async (INotificationService notificationService, ISettingsService settingsService, Notification notification) =>
+            {
+                // The notification payload no longer requires email; it will be fetched from UserSettings
+                await notificationService.SendNotificationAsync(notification);
+                return Results.Ok();
+            });
+
             // Health/status endpoint
             app.MapGet("/health", () => Results.Ok(new { status = "Healthy" }));
         }
