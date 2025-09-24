@@ -26,12 +26,29 @@ namespace AiWebSiteWatchDog.Infrastructure.Email
                 using var secretStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(emailSettings.GmailClientSecretJson));
                 var googleSecrets = GoogleClientSecrets.FromStream(secretStream).Secrets;
 
+                string tokenPath;
+                if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+                {
+                    tokenPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "AiWebSiteWatchdog", "GmailApiToken");
+                }
+                else
+                {
+                    var home = Environment.GetEnvironmentVariable("HOME") ?? "/tmp";
+                    tokenPath = Path.Combine(home, ".config", "AiWebSiteWatchdog", "GmailApiToken");
+                }
+                // Optionally override with environment variable
+                var customPath = Environment.GetEnvironmentVariable("GMAIL_API_TOKEN_PATH");
+                if (!string.IsNullOrEmpty(customPath))
+                {
+                    tokenPath = customPath;
+                }
+
                 var credential = await GoogleWebAuthorizationBroker.AuthorizeAsync(
                     googleSecrets,
                     [GmailService.Scope.GmailSend],
                     emailSettings.SenderEmail,
                     CancellationToken.None,
-                    new FileDataStore("GmailApiToken")
+                    new FileDataStore(tokenPath)
                 );
 
                 var service = new GmailService(new BaseClientService.Initializer()
