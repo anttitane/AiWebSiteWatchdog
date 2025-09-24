@@ -76,7 +76,7 @@ namespace AiWebSiteWatchDog.API
                     watchUrl: task.Url,
                     interestSentence: task.InterestSentence,
                     schedule: string.Empty,
-                    emailSettingsId: 0
+                    emailSettingsSenderEmail: "dummy@example.com"
                 );
                 var result = await watcherService.CheckWebsiteAsync(settings);
                 return Results.Ok(result);
@@ -98,6 +98,14 @@ namespace AiWebSiteWatchDog.API
             {
                 var result = await repo.DeleteAsync(id);
                 return result ? Results.Ok() : Results.NotFound();
+            });
+
+            // Send notification (trigger email)
+            app.MapPost("/notifications", async (INotificationService notificationService, ISettingsService settingsService, Notification notification) =>
+            {
+                // The notification payload no longer requires email; it will be fetched from UserSettings
+                await notificationService.SendNotificationAsync(notification);
+                return Results.Ok();
             });
 
             // Health/status endpoint

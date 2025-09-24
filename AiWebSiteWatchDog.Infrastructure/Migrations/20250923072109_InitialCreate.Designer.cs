@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AiWebSiteWatchDog.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250919170844_InitialCreate")]
+    [Migration("20250923072109_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -22,18 +22,10 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
 
             modelBuilder.Entity("AiWebSiteWatchDog.Domain.Entities.EmailSettings", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("AppPassword")
-                        .IsRequired()
+                    b.Property<string>("SenderEmail")
                         .HasColumnType("TEXT");
 
-                    b.Property<bool>("EnableSsl")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("SenderEmail")
+                    b.Property<string>("GmailClientSecretJson")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
@@ -41,14 +33,7 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("SmtpPort")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("SmtpServer")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
+                    b.HasKey("SenderEmail");
 
                     b.ToTable("EmailSettings");
                 });
@@ -58,10 +43,6 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
-
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
 
                     b.Property<string>("Message")
                         .IsRequired()
@@ -84,8 +65,9 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
                     b.Property<string>("Email")
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("EmailSettingsId")
-                        .HasColumnType("INTEGER");
+                    b.Property<string>("EmailSettingsSenderEmail")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("GeminiApiKey")
                         .IsRequired()
@@ -105,7 +87,7 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
 
                     b.HasKey("Email");
 
-                    b.HasIndex("EmailSettingsId")
+                    b.HasIndex("EmailSettingsSenderEmail")
                         .IsUnique();
 
                     b.ToTable("UserSettings");
@@ -140,7 +122,7 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
                 {
                     b.HasOne("AiWebSiteWatchDog.Domain.Entities.EmailSettings", "EmailSettings")
                         .WithOne()
-                        .HasForeignKey("AiWebSiteWatchDog.Domain.Entities.UserSettings", "EmailSettingsId")
+                        .HasForeignKey("AiWebSiteWatchDog.Domain.Entities.UserSettings", "EmailSettingsSenderEmail")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

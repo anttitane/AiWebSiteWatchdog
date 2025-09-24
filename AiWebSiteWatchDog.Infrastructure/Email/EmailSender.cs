@@ -1,7 +1,13 @@
 using System;
-using System.Net;
-using System.Net.Mail;
 using System.Threading.Tasks;
+using Google.Apis.Auth.OAuth2;
+using Google.Apis.Gmail.v1;
+using Google.Apis.Gmail.v1.Data;
+using Google.Apis.Services;
+using Google.Apis.Util.Store;
+using MimeKit;
+using System.IO;
+using System.Threading;
 using AiWebSiteWatchDog.Domain.Entities;
 using AiWebSiteWatchDog.Domain.Interfaces;
 using Serilog;
@@ -10,28 +16,66 @@ namespace AiWebSiteWatchDog.Infrastructure.Email
 {
     public class EmailSender() : IEmailSender
     {
-        public async Task SendAsync(Notification notification, EmailSettings emailSettings)
+        public async Task SendAsync(Notification notification, EmailSettings emailSettings, string recipientEmail)
         {
-            var message = new MailMessage();
-            message.From = new MailAddress(emailSettings.SenderEmail, emailSettings.SenderName);
-            message.To.Add(notification.Email);
-            message.Subject = notification.Subject;
-            message.Body = notification.Message;
-
             try
             {
-                using var client = new SmtpClient(emailSettings.SmtpServer, emailSettings.SmtpPort)
+                if (string.IsNullOrWhiteSpace(emailSettings.GmailClientSecretJson))
+                    throw new ArgumentException("GmailClientSecretJson must be provided for Gmail API OAuth2.");
+
+                using var secretStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(emailSettings.GmailClientSecretJson));
+                var googleSecrets = GoogleClientSecrets.FromStream(secretStream).Secrets;
+
+                string tokenPath;
+                if (Environment.OSVersion.Platform == PlatformID.Win32NT)
                 {
-                    Credentials = new NetworkCredential(emailSettings.SenderEmail, emailSettings.AppPassword),
-                    EnableSsl = emailSettings.EnableSsl
-                };
-                Log.Information("Sending email to {Email} via {SmtpServer}:{SmtpPort}", notification.Email, emailSettings.SmtpServer, emailSettings.SmtpPort);
-                await client.SendMailAsync(message);
-                Log.Information("Email sent to {Email} with subject '{Subject}'", notification.Email, notification.Subject);
+                    tokenPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "AiWebSiteWatchdog", "GmailApiToken");
+                }
+                else
+                {
+                    var home = Environment.GetEnvironmentVariable("HOME") ?? "/tmp";
+                    tokenPath = Path.Combine(home, ".config", "AiWebSiteWatchdog", "GmailApiToken");
+                }
+                // Optionally override with environment variable
+                var customPath = Environment.GetEnvironmentVariable("GMAIL_API_TOKEN_PATH");
+                if (!string.IsNullOrEmpty(customPath))
+                {
+                    tokenPath = customPath;
+                }
+
+                var credential = await GoogleWebAuthorizationBroker.AuthorizeAsync(
+                    googleSecrets,
+                    [GmailService.Scope.GmailSend],
+                    emailSettings.SenderEmail,
+                    CancellationToken.None,
+                    new FileDataStore(tokenPath)
+                );
+
+                var service = new GmailService(new BaseClientService.Initializer()
+                {
+                    HttpClientInitializer = credential,
+                    ApplicationName = "AiWebSiteWatchdog"
+                });
+
+                var emailMessage = new MimeMessage();
+                emailMessage.From.Add(new MailboxAddress(emailSettings.SenderName, emailSettings.SenderEmail));
+                emailMessage.To.Add(new MailboxAddress("Recipient", recipientEmail));
+                emailMessage.Subject = notification.Subject;
+                emailMessage.Body = new TextPart("plain") { Text = notification.Message };
+
+                using var stream = new MemoryStream();
+                emailMessage.WriteTo(stream);
+                var rawMessage = Convert.ToBase64String(stream.ToArray())
+                    .Replace('+', '-').Replace('/', '_').Replace("=", "");
+
+                var message = new Message { Raw = rawMessage };
+                Log.Information("Sending email to {Email} via Gmail API", recipientEmail);
+                await service.Users.Messages.Send(message, "me").ExecuteAsync();
+                Log.Information("Email sent to {Email} with subject '{Subject}'", recipientEmail, notification.Subject);
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Failed to send email to {Email}", notification.Email);
+                Log.Error(ex, "Unhandled exception in EmailSender.SendAsync for recipient {Email}", recipientEmail);
                 throw;
             }
         }

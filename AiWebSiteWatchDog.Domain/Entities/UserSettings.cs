@@ -1,6 +1,6 @@
 namespace AiWebSiteWatchDog.Domain.Entities
 {
-    public class UserSettings(string email, string geminiApiKey, string watchUrl, string interestSentence, string schedule, int emailSettingsId)
+    public class UserSettings(string email, string geminiApiKey, string watchUrl, string interestSentence, string schedule, string emailSettingsSenderEmail)
     {
         public string Email { get; set; } = email;
         public string GeminiApiKey { get; set; } = geminiApiKey;
@@ -8,7 +8,7 @@ namespace AiWebSiteWatchDog.Domain.Entities
         public string InterestSentence { get; set; } = interestSentence;
         public string Schedule { get; set; } = schedule; // e.g., cron expression
 
-        public int EmailSettingsId { get; set; } = emailSettingsId;
+        public string EmailSettingsSenderEmail { get; set; } = emailSettingsSenderEmail;
         public EmailSettings? EmailSettings { get; set; }
     }
 }

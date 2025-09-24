@@ -22,7 +22,7 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
                         watchUrl: string.Empty,
                         interestSentence: string.Empty,
                         schedule: string.Empty,
-                        emailSettingsId: 0
+                        emailSettingsSenderEmail: string.Empty
                     );
                 }
                 Log.Information("Settings loaded successfully from database.");
