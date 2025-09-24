@@ -17,7 +17,7 @@ namespace AiWebSiteWatchDog.Application.Services
             {
                 throw new ArgumentNullException(nameof(settings.EmailSettings), "EmailSettings cannot be null when sending notification.");
             }
-            await _emailSender.SendAsync(notification, settings.EmailSettings);
+            await _emailSender.SendAsync(notification, settings.EmailSettings, settings.Email);
         }
     }
 }

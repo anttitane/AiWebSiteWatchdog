@@ -76,7 +76,7 @@ namespace AiWebSiteWatchDog.API
                     watchUrl: task.Url,
                     interestSentence: task.InterestSentence,
                     schedule: string.Empty,
-                    emailSettingsId: 0
+                    emailSettingsSenderEmail: "dummy@example.com"
                 );
                 var result = await watcherService.CheckWebsiteAsync(settings);
                 return Results.Ok(result);
