@@ -15,14 +15,14 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<UserSettings>().HasKey(u => u.Email);
-            modelBuilder.Entity<EmailSettings>().HasKey(e => e.Id);
+            modelBuilder.Entity<EmailSettings>().HasKey(e => e.SenderEmail);
             modelBuilder.Entity<Notification>().HasKey(n => n.Id);
             modelBuilder.Entity<WatchTask>().HasKey(w => w.Id);
-            // Configure one-to-one relationship between UserSettings and EmailSettings
+            // Configure one-to-one relationship between UserSettings and EmailSettings using SenderEmail
             modelBuilder.Entity<UserSettings>()
                 .HasOne(u => u.EmailSettings)
                 .WithOne()
-                .HasForeignKey<UserSettings>(u => u.EmailSettingsId);
+                .HasForeignKey<UserSettings>(u => u.EmailSettingsSenderEmail);
         }
     }
 }

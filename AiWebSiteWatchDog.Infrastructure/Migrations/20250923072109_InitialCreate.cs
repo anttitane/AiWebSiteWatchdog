@@ -15,18 +15,13 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
                 name: "EmailSettings",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    SmtpServer = table.Column<string>(type: "TEXT", nullable: false),
-                    SmtpPort = table.Column<int>(type: "INTEGER", nullable: false),
                     SenderEmail = table.Column<string>(type: "TEXT", nullable: false),
                     SenderName = table.Column<string>(type: "TEXT", nullable: false),
-                    AppPassword = table.Column<string>(type: "TEXT", nullable: false),
-                    EnableSsl = table.Column<bool>(type: "INTEGER", nullable: false)
+                    GmailClientSecretJson = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_EmailSettings", x => x.Id);
+                    table.PrimaryKey("PK_EmailSettings", x => x.SenderEmail);
                 });
 
             migrationBuilder.CreateTable(
@@ -35,7 +30,6 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    Email = table.Column<string>(type: "TEXT", nullable: false),
                     Subject = table.Column<string>(type: "TEXT", nullable: false),
                     Message = table.Column<string>(type: "TEXT", nullable: false),
                     SentAt = table.Column<DateTime>(type: "TEXT", nullable: false)
@@ -70,23 +64,23 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
                     WatchUrl = table.Column<string>(type: "TEXT", nullable: false),
                     InterestSentence = table.Column<string>(type: "TEXT", nullable: false),
                     Schedule = table.Column<string>(type: "TEXT", nullable: false),
-                    EmailSettingsId = table.Column<int>(type: "INTEGER", nullable: false)
+                    EmailSettingsSenderEmail = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_UserSettings", x => x.Email);
                     table.ForeignKey(
-                        name: "FK_UserSettings_EmailSettings_EmailSettingsId",
-                        column: x => x.EmailSettingsId,
+                        name: "FK_UserSettings_EmailSettings_EmailSettingsSenderEmail",
+                        column: x => x.EmailSettingsSenderEmail,
                         principalTable: "EmailSettings",
-                        principalColumn: "Id",
+                        principalColumn: "SenderEmail",
                         onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_UserSettings_EmailSettingsId",
+                name: "IX_UserSettings_EmailSettingsSenderEmail",
                 table: "UserSettings",
-                column: "EmailSettingsId",
+                column: "EmailSettingsSenderEmail",
                 unique: true);
         }
 
