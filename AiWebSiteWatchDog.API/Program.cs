@@ -61,9 +61,9 @@ builder.Services.AddScoped<ISettingsRepository, AiWebSiteWatchDog.Infrastructure
 builder.Services.AddScoped<AiWebSiteWatchDog.Infrastructure.Persistence.NotificationRepository>();
 builder.Services.AddScoped<AiWebSiteWatchDog.Infrastructure.Persistence.WatchTaskRepository>();
 builder.Services.AddScoped<AiWebSiteWatchDog.Infrastructure.Persistence.EmailSettingsRepository>();
-builder.Services.AddSingleton<AiWebSiteWatchDog.Infrastructure.Auth.IGoogleCredentialProvider, AiWebSiteWatchDog.Infrastructure.Auth.GoogleCredentialProvider>();
-builder.Services.AddSingleton<IEmailSender, AiWebSiteWatchDog.Infrastructure.Email.EmailSender>();
-builder.Services.AddSingleton<IGeminiApiClient, AiWebSiteWatchDog.Infrastructure.Gemini.GeminiApiClient>();
+builder.Services.AddScoped<AiWebSiteWatchDog.Infrastructure.Auth.IGoogleCredentialProvider, AiWebSiteWatchDog.Infrastructure.Auth.GoogleCredentialProvider>();
+builder.Services.AddScoped<IEmailSender, AiWebSiteWatchDog.Infrastructure.Email.EmailSender>();
+builder.Services.AddScoped<IGeminiApiClient, AiWebSiteWatchDog.Infrastructure.Gemini.GeminiApiClient>();
 
 // Register application services
 builder.Services.AddScoped<ISettingsService, AiWebSiteWatchDog.Application.Services.SettingsService>();
