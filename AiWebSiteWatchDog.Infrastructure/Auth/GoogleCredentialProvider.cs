@@ -27,8 +27,8 @@ namespace AiWebSiteWatchDog.Infrastructure.Auth
         private static readonly string[] Scopes =
         [
             GmailService.Scope.GmailSend,
-            // Gemini / Generative Language broad scope
-            "https://www.googleapis.com/auth/generative-language"
+            // Gemini / Generative Language scope
+            "https://www.googleapis.com/auth/generative-language.retriever"
         ];
 
     private readonly AppDbContext _dbContext;
