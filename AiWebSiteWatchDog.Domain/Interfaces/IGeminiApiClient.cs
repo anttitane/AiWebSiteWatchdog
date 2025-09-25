@@ -4,6 +4,7 @@ namespace AiWebSiteWatchDog.Domain.Interfaces
 {
     public interface IGeminiApiClient
     {
-        Task<string> CheckInterestAsync(string text, string interest, string apiKey);
+        // Uses stored OAuth credential; no apiKey needed.
+        Task<string> CheckInterestAsync(string text, string interest);
     }
 }
