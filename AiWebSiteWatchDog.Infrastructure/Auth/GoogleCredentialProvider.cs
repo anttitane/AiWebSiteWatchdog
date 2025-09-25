@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Gmail.v1;
 using Serilog;
+using Microsoft.Extensions.Configuration;
 using AiWebSiteWatchDog.Infrastructure.Persistence;
 using Google.Apis.Util.Store;
 
@@ -30,17 +31,21 @@ namespace AiWebSiteWatchDog.Infrastructure.Auth
             "https://www.googleapis.com/auth/generative-language"
         ];
 
-        private readonly AppDbContext _dbContext;
-        private readonly bool _useDbStore;
-        private readonly byte[]? _encryptionKey;
+    private readonly AppDbContext _dbContext;
+    private readonly IConfiguration _config;
+    private readonly bool _useDbStore;
+    private readonly byte[]? _encryptionKey;
 
-        public GoogleCredentialProvider(AppDbContext dbContext)
+        public GoogleCredentialProvider(AppDbContext dbContext, IConfiguration config)
         {
             _dbContext = dbContext;
+            _config = config;
             _useDbStore = string.Equals(Environment.GetEnvironmentVariable("USE_DB_TOKEN_STORE"), "true", StringComparison.OrdinalIgnoreCase);
             if (_useDbStore)
             {
+                // Prefer environment variable, fall back to configuration (user-secrets / appsettings)
                 var keyB64 = Environment.GetEnvironmentVariable("GOOGLE_TOKENS_ENCRYPTION_KEY")
+                    ?? _config["GOOGLE_TOKENS_ENCRYPTION_KEY"]
                     ?? throw new InvalidOperationException("GOOGLE_TOKENS_ENCRYPTION_KEY must be set when USE_DB_TOKEN_STORE=true");
                 try
                 {
@@ -57,9 +62,10 @@ namespace AiWebSiteWatchDog.Infrastructure.Auth
 
         public async Task<UserCredential> GetGmailAndGeminiCredentialAsync(string senderEmail, CancellationToken ct = default)
         {
-            var clientSecretJson = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET_JSON");
+            // Allow providing client secret via environment variable OR IConfiguration (user-secrets/appsettings)
+            var clientSecretJson = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET_JSON") ?? _config["GOOGLE_CLIENT_SECRET_JSON"];
             if (string.IsNullOrWhiteSpace(clientSecretJson))
-                throw new InvalidOperationException("GOOGLE_CLIENT_SECRET_JSON environment variable is required.");
+                throw new InvalidOperationException("GOOGLE_CLIENT_SECRET_JSON environment variable or configuration value is required.");
 
             try
             {
