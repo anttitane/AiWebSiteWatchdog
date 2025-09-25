@@ -92,24 +92,7 @@ namespace AiWebSiteWatchDog.Infrastructure.Auth
                     ? new DbEncryptedDataStore(_dbContext, _encryptionKey!)
                     : CreateFileStore(senderEmail);
 
-                // Base token storage path (can be overridden via env variable)
-                string tokenPath;
-                if (Environment.OSVersion.Platform == PlatformID.Win32NT)
-                {
-                    tokenPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "AiWebSiteWatchdog", "GoogleTokens");
-                }
-                else
-                {
-                    var home = Environment.GetEnvironmentVariable("HOME") ?? "/tmp";
-                    tokenPath = Path.Combine(home, ".config", "AiWebSiteWatchdog", "GoogleTokens");
-                }
-                var customPath = Environment.GetEnvironmentVariable("GOOGLE_TOKENS_PATH");
-                if (!string.IsNullOrWhiteSpace(customPath))
-                    tokenPath = customPath;
-
-                // Use hashed subfolder per email (privacy & avoids special chars). SHA256(email).Take(16) for folder name.
-                var emailHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(senderEmail)))[..16];
-                tokenPath = Path.Combine(tokenPath, emailHash);
+                string tokenPath = GetTokenPath(senderEmail);
                 Directory.CreateDirectory(tokenPath);
 
                 var credential = await GoogleWebAuthorizationBroker.AuthorizeAsync(
@@ -131,7 +114,13 @@ namespace AiWebSiteWatchDog.Infrastructure.Auth
 
         private static IDataStore CreateFileStore(string senderEmail)
         {
-            // Base token storage path (can be overridden via env variable)
+            string tokenPath = GetTokenPath(senderEmail);
+            Directory.CreateDirectory(tokenPath);
+            return new FileDataStore(tokenPath, true);
+        }
+
+        private static string GetTokenPath(string senderEmail)
+        {
             string tokenPath;
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)
             {
@@ -147,8 +136,7 @@ namespace AiWebSiteWatchDog.Infrastructure.Auth
                 tokenPath = customPath;
             var emailHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(senderEmail)))[..16];
             tokenPath = Path.Combine(tokenPath, emailHash);
-            Directory.CreateDirectory(tokenPath);
-            return new FileDataStore(tokenPath, true);
+            return tokenPath;
         }
     }
 }
