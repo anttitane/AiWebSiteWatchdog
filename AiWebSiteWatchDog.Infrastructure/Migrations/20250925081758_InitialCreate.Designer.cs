@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AiWebSiteWatchDog.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250923072109_InitialCreate")]
+    [Migration("20250925081758_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -23,10 +23,6 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
             modelBuilder.Entity("AiWebSiteWatchDog.Domain.Entities.EmailSettings", b =>
                 {
                     b.Property<string>("SenderEmail")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("GmailClientSecretJson")
-                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("SenderName")
@@ -66,10 +62,6 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("EmailSettingsSenderEmail")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("GeminiApiKey")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
@@ -116,6 +108,31 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("WatchTasks");
+                });
+
+            modelBuilder.Entity("AiWebSiteWatchDog.Infrastructure.Persistence.GoogleOAuthToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EncryptedJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.ToTable("GoogleOAuthTokens");
                 });
 
             modelBuilder.Entity("AiWebSiteWatchDog.Domain.Entities.UserSettings", b =>

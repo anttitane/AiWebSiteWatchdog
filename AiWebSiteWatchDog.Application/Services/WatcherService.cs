@@ -12,7 +12,7 @@ namespace AiWebSiteWatchDog.Application.Services
 
         public async Task<WatchTask> CheckWebsiteAsync(UserSettings settings)
         {
-            var result = await _geminiApiClient.CheckInterestAsync(settings.WatchUrl, settings.InterestSentence, settings.GeminiApiKey);
+            var result = await _geminiApiClient.CheckInterestAsync(settings.WatchUrl, settings.InterestSentence);
             
             return new WatchTask
             {

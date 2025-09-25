@@ -60,3 +60,6 @@ nunit-*.xml
 
 #Visual Studio
 .vs/
+
+#Secrets
+client_secret*.json

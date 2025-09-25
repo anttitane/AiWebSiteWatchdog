@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using System;
+using System.Threading;
 using AiWebSiteWatchDog.Domain.Entities;
 using AiWebSiteWatchDog.Domain.Interfaces;
 
@@ -72,7 +74,6 @@ namespace AiWebSiteWatchDog.API
                 // Provide dummy/default values for required UserSettings constructor parameters
                 var settings = new UserSettings(
                     email: "dummy@example.com",
-                    geminiApiKey: string.Empty,
                     watchUrl: task.Url,
                     interestSentence: task.InterestSentence,
                     schedule: string.Empty,
@@ -110,6 +111,38 @@ namespace AiWebSiteWatchDog.API
 
             // Health/status endpoint
             app.MapGet("/health", () => Results.Ok(new { status = "Healthy" }));
+
+            // Authentication initiation endpoint (triggers Google OAuth consent if not already authorized)
+            // Optional query parameter ?senderEmail= overrides stored settings sender email.
+            app.MapPost("/auth/initiate", async (
+                Infrastructure.Auth.IGoogleCredentialProvider credentialProvider,
+                ISettingsService settingsService,
+                HttpRequest request,
+                CancellationToken ct) =>
+            {
+                // Allow explicit sender email override via query string
+                var senderValues = request.Query["senderEmail"];
+                string? senderEmail = senderValues.Count > 0 ? senderValues[0] : null;
+                if (string.IsNullOrWhiteSpace(senderEmail))
+                {
+                    var settings = await settingsService.GetSettingsAsync();
+                    if (settings is null || string.IsNullOrWhiteSpace(settings.EmailSettingsSenderEmail))
+                        return Results.BadRequest("Sender email not configured and no senderEmail query parameter provided.");
+                    senderEmail = settings.EmailSettingsSenderEmail;
+                }
+
+                try
+                {
+                    await credentialProvider.GetGmailAndGeminiCredentialAsync(senderEmail!, ct);
+                    return Results.Ok(new { senderEmail, authenticated = true });
+                }
+                catch (Exception ex)
+                {
+                    return Results.Problem(ex.Message, statusCode: 500);
+                }
+            })
+            .WithDescription("Initiate Google OAuth consent for Gmail/Gemini scopes.")
+            .WithTags("auth");
         }
     }
 }

@@ -16,12 +16,26 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
                 columns: table => new
                 {
                     SenderEmail = table.Column<string>(type: "TEXT", nullable: false),
-                    SenderName = table.Column<string>(type: "TEXT", nullable: false),
-                    GmailClientSecretJson = table.Column<string>(type: "TEXT", nullable: false)
+                    SenderName = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_EmailSettings", x => x.SenderEmail);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "GoogleOAuthTokens",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    Email = table.Column<string>(type: "TEXT", nullable: false),
+                    EncryptedJson = table.Column<string>(type: "TEXT", nullable: false),
+                    UpdatedUtc = table.Column<DateTime>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_GoogleOAuthTokens", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -60,7 +74,6 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
                 columns: table => new
                 {
                     Email = table.Column<string>(type: "TEXT", nullable: false),
-                    GeminiApiKey = table.Column<string>(type: "TEXT", nullable: false),
                     WatchUrl = table.Column<string>(type: "TEXT", nullable: false),
                     InterestSentence = table.Column<string>(type: "TEXT", nullable: false),
                     Schedule = table.Column<string>(type: "TEXT", nullable: false),
@@ -78,6 +91,12 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_GoogleOAuthTokens_Email",
+                table: "GoogleOAuthTokens",
+                column: "Email",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_UserSettings_EmailSettingsSenderEmail",
                 table: "UserSettings",
                 column: "EmailSettingsSenderEmail",
@@ -87,6 +106,9 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "GoogleOAuthTokens");
+
             migrationBuilder.DropTable(
                 name: "Notifications");
 

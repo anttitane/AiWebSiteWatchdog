@@ -4,54 +4,27 @@ using Google.Apis.Auth.OAuth2;
 using Google.Apis.Gmail.v1;
 using Google.Apis.Gmail.v1.Data;
 using Google.Apis.Services;
-using Google.Apis.Util.Store;
 using MimeKit;
 using System.IO;
-using System.Threading;
 using AiWebSiteWatchDog.Domain.Entities;
 using AiWebSiteWatchDog.Domain.Interfaces;
 using Serilog;
+using AiWebSiteWatchDog.Infrastructure.Auth;
 
 namespace AiWebSiteWatchDog.Infrastructure.Email
 {
-    public class EmailSender() : IEmailSender
+    public class EmailSender(IGoogleCredentialProvider credentialProvider) : IEmailSender
     {
+        private readonly IGoogleCredentialProvider _credentialProvider = credentialProvider;
         public async Task SendAsync(Notification notification, EmailSettings emailSettings, string recipientEmail)
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(emailSettings.GmailClientSecretJson))
-                    throw new ArgumentException("GmailClientSecretJson must be provided for Gmail API OAuth2.");
-
-                using var secretStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(emailSettings.GmailClientSecretJson));
-                var googleSecrets = GoogleClientSecrets.FromStream(secretStream).Secrets;
-
-                string tokenPath;
-                if (Environment.OSVersion.Platform == PlatformID.Win32NT)
-                {
-                    tokenPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "AiWebSiteWatchdog", "GmailApiToken");
-                }
-                else
-                {
-                    var home = Environment.GetEnvironmentVariable("HOME") ?? "/tmp";
-                    tokenPath = Path.Combine(home, ".config", "AiWebSiteWatchdog", "GmailApiToken");
-                }
-                // Optionally override with environment variable
-                var customPath = Environment.GetEnvironmentVariable("GMAIL_API_TOKEN_PATH");
-                if (!string.IsNullOrEmpty(customPath))
-                {
-                    tokenPath = customPath;
-                }
-
-                var credential = await GoogleWebAuthorizationBroker.AuthorizeAsync(
-                    googleSecrets,
-                    [GmailService.Scope.GmailSend],
-                    emailSettings.SenderEmail,
-                    CancellationToken.None,
-                    new FileDataStore(tokenPath)
+                var credential = await _credentialProvider.GetGmailAndGeminiCredentialAsync(
+                    emailSettings.SenderEmail
                 );
 
-                var service = new GmailService(new BaseClientService.Initializer()
+                var service = new GmailService(new BaseClientService.Initializer
                 {
                     HttpClientInitializer = credential,
                     ApplicationName = "AiWebSiteWatchdog"

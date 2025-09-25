@@ -4,14 +4,18 @@ using System.Net.Http.Json;
 using System.Threading.Tasks;
 using Serilog;
 using AiWebSiteWatchDog.Domain.Interfaces;
+using AiWebSiteWatchDog.Infrastructure.Auth;
+using Google.Apis.Auth.OAuth2;
 
 namespace AiWebSiteWatchDog.Infrastructure.Gemini
 {
-    public class GeminiApiClient() : IGeminiApiClient
+    public class GeminiApiClient(IGoogleCredentialProvider credentialProvider, ISettingsService settingsService) : IGeminiApiClient
     {
-        public async Task<string> CheckInterestAsync(string text, string interest, string apiKey)
+        private readonly IGoogleCredentialProvider _credentialProvider = credentialProvider;
+        private readonly ISettingsService _settingsService = settingsService;
+        public async Task<string> CheckInterestAsync(string text, string interest)
         {
-            var geminiUrl = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={apiKey}";
+            var geminiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 
             var geminiBody = new
             {
@@ -27,12 +31,18 @@ namespace AiWebSiteWatchDog.Infrastructure.Gemini
 
             try
             {
+                var settings = await _settingsService.GetSettingsAsync();
+                var senderEmail = settings.EmailSettings?.SenderEmail
+                    ?? throw new InvalidOperationException("EmailSettings.SenderEmail not configured in database.");
+                var credential = await _credentialProvider.GetGmailAndGeminiCredentialAsync(senderEmail);
+                var accessToken = await credential.GetAccessTokenForRequestAsync();
+
                 using var http = new HttpClient();
                 var request = new HttpRequestMessage(HttpMethod.Post, geminiUrl)
                 {
                     Content = JsonContent.Create(geminiBody)
                 };
-                request.Headers.Add("X-goog-api-key", apiKey);
+                request.Headers.Add("Authorization", $"Bearer {accessToken}");
                 request.Headers.Add("Accept", "application/json");
 
                 Log.Information("Calling Gemini API for interest '{Interest}'", interest);
