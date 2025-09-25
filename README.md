@@ -1,14 +1,14 @@
 # AiWebSiteWatchdog
 AI powered .NET app which scans regularly predefined set of web sites and searches predefined interests
 
-## How to get Google OAuth2 client_secret.json for Gmail API
-This app uses the Gmail API via Google Cloud and OAuth2 for secure email delivery:
+## How to get Google OAuth2 client_secret.json for Gmail and Gemini API
+This app uses the Gmail and Gemini API via Google Cloud and OAuth2 for secure email delivery and Gemini usage:
 
-- **OAuth2 Security:** Your Gmail password is never seen or stored by the app. Instead, Google issues a secure, time-limited access token after you grant permission.
+- **OAuth2 Security:** Your Google password is never seen or stored by the app. Instead, Google issues a secure, time-limited access token after you grant permission.
 - **User Consent:** You must log in and explicitly approve access to your Gmail account. No email can be sent without your consent.
 - **Google Cloud Controls:** All credentials are managed in Google Cloud Console, which provides strong security and access controls.
 - **Token Storage:** Access tokens are stored securely and can be revoked by you at any time in your Google account settings.
-- **API Scopes:** The app only requests the minimum required scope (`GmailSend`), limiting what it can do with your account.
+- **API Scopes:** The app only requests the minimum required scope (`Send email on your behalf` and `Use Gemini models with your personal quota`), limiting what it can do with your account.
 
 This means only authorized users can send email, credentials are never exposed, and Google’s infrastructure protects both authentication and email delivery.
 
@@ -24,7 +24,9 @@ To send email using the Gmail API, you need a Google OAuth2 client_secret.json f
 7. Choose "Desktop app" (for local testing) or "Web application" (for server).
 8. Enter a name and click "Create".
 9. Download the `client_secret.json` file.
-10. Open the file and copy its contents. Set it as an environment variable `GOOGLE_CLIENT_SECRET_JSON` (see Environment Variables section below). The secret is no longer stored in the database for security reasons.
+10. Open the file and copy its contents. Set it as an environment variable `GOOGLE_CLIENT_SECRET_JSON` (see Environment Variables section below).
+11. On "Data access" tab add scopes for `.../auth/gmail.send` and `./auth/generative-language.peruserquota`
+12. Save changes.
 
 **Important:**
 - If your OAuth consent screen is in testing mode, you must add your Google account as a test user in the "Test users" section of the consent screen (found in the audience tab).
