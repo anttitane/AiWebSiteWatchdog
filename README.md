@@ -1,5 +1,27 @@
 # AiWebSiteWatchdog
+
 AI powered .NET app which scans regularly predefined set of web sites and searches predefined interests
+
+---
+
+## How to get Google OAuth2 client_secret.json for Gmail and Gemini API
+This app uses the Gmail and Gemini API via Google Cloud and OAuth2 for secure email delivery and Gemini usage:
+
+- **OAuth2 Security:** Your Google password is never seen or stored by the app. Instead, Google issues a secure, time-limited access token after you grant permission.
+- **User Consent:** You must log in and explicitly approve access to your Gmail account. No email can be sent without your consent.
+- **Google Cloud Controls:** All credentials are managed in Google Cloud Console, which provides strong security and access controls.
+- **Token Storage:** Access tokens are stored securely and can be revoked by you at any time in your Google account settings.
+- **API Scopes:** The app only requests the minimum required scope (`Send email on your behalf` and `Use Gemini models with your personal quota`), limiting what it can do with your account.
+- **Token Refresh & Longevity:**
+	- Access tokens issued by Google are short-lived (typically 1 hour).
+	- The app uses the official Google.Apis.Auth library, which automatically refreshes access tokens using a stored refresh token. No manual action is needed for normal operation.
+	- As long as the refresh token is valid and present (stored securely in DB or filesystem), the app can maintain long-term access without user intervention.
+	- If the refresh token is revoked or lost, you will need to re-consent (see Token Storage Behavior below).
+	- If you change API scopes, you must re-consent and delete the old token (see instructions below).
+
+This means only authorized users can send email, credentials are never exposed, and Google’s infrastructure protects both authentication and email delivery.
+
+---
 
 ## How to get Google OAuth2 client_secret.json for Gmail and Gemini API
 This app uses the Gmail and Gemini API via Google Cloud and OAuth2 for secure email delivery and Gemini usage:
