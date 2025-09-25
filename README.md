@@ -112,10 +112,13 @@ $env:GOOGLE_TOKENS_ENCRYPTION_KEY = 'Base64KeyHere'  # required if USE_DB_TOKEN_
 dotnet run --project .\AiWebSiteWatchDog.API
 ```
 
-### Docker Run Example
+### Docker Run Example (PowerShell)
 ```pwsh
-docker run --rm -p 5050:8080 \
-	-e GOOGLE_CLIENT_SECRET_JSON="$(Get-Content -Raw .\client_secret.json)" \
+docker run --rm -p 5050:8080 `
+	-e GOOGLE_CLIENT_SECRET_JSON="$(Get-Content -Raw .\client_secret.json)" `
+	-e USE_DB_TOKEN_STORE=true `
+	-e GOOGLE_TOKENS_ENCRYPTION_KEY=Base64KeyHere `
+	your-image:latest
 	-e USE_DB_TOKEN_STORE=true \
 	-e GOOGLE_TOKENS_ENCRYPTION_KEY=Base64KeyHere \
 	your-image:latest
