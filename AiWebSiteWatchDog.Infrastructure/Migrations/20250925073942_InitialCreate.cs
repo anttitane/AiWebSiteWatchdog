@@ -25,6 +25,21 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "GoogleOAuthTokens",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    Email = table.Column<string>(type: "TEXT", nullable: false),
+                    EncryptedJson = table.Column<string>(type: "TEXT", nullable: false),
+                    UpdatedUtc = table.Column<DateTime>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_GoogleOAuthTokens", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Notifications",
                 columns: table => new
                 {
@@ -78,6 +93,12 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_GoogleOAuthTokens_Email",
+                table: "GoogleOAuthTokens",
+                column: "Email",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_UserSettings_EmailSettingsSenderEmail",
                 table: "UserSettings",
                 column: "EmailSettingsSenderEmail",
@@ -87,6 +108,9 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "GoogleOAuthTokens");
+
             migrationBuilder.DropTable(
                 name: "Notifications");
 

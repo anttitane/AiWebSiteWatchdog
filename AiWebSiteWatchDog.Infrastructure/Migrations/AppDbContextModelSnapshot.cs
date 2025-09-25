@@ -115,6 +115,31 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
                     b.ToTable("WatchTasks");
                 });
 
+            modelBuilder.Entity("AiWebSiteWatchDog.Infrastructure.Persistence.GoogleOAuthToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EncryptedJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.ToTable("GoogleOAuthTokens");
+                });
+
             modelBuilder.Entity("AiWebSiteWatchDog.Domain.Entities.UserSettings", b =>
                 {
                     b.HasOne("AiWebSiteWatchDog.Domain.Entities.EmailSettings", "EmailSettings")
