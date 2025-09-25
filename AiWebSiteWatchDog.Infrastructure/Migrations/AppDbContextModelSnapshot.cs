@@ -22,10 +22,6 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
                     b.Property<string>("SenderEmail")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("GmailClientSecretJson")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("SenderName")
                         .IsRequired()
                         .HasColumnType("TEXT");

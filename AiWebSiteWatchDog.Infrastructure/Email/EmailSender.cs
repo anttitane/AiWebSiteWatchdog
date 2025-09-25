@@ -20,12 +20,8 @@ namespace AiWebSiteWatchDog.Infrastructure.Email
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(emailSettings.GmailClientSecretJson))
-                    throw new ArgumentException("GmailClientSecretJson must be provided for Gmail API OAuth2.");
-
                 var credential = await _credentialProvider.GetGmailAndGeminiCredentialAsync(
-                    emailSettings.SenderEmail,
-                    emailSettings.GmailClientSecretJson
+                    emailSettings.SenderEmail
                 );
 
                 var service = new GmailService(new BaseClientService.Initializer

@@ -34,10 +34,7 @@ namespace AiWebSiteWatchDog.Infrastructure.Gemini
                 var settings = await _settingsService.GetSettingsAsync();
                 var senderEmail = settings.EmailSettings?.SenderEmail
                     ?? throw new InvalidOperationException("EmailSettings.SenderEmail not configured in database.");
-                var clientSecretJson = settings.EmailSettings?.GmailClientSecretJson
-                    ?? throw new InvalidOperationException("EmailSettings.GmailClientSecretJson not configured in database.");
-
-                var credential = await _credentialProvider.GetGmailAndGeminiCredentialAsync(senderEmail, clientSecretJson);
+                var credential = await _credentialProvider.GetGmailAndGeminiCredentialAsync(senderEmail);
                 var accessToken = await credential.GetAccessTokenForRequestAsync();
 
                 using var http = new HttpClient();

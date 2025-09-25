@@ -16,8 +16,7 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
                 columns: table => new
                 {
                     SenderEmail = table.Column<string>(type: "TEXT", nullable: false),
-                    SenderName = table.Column<string>(type: "TEXT", nullable: false),
-                    GmailClientSecretJson = table.Column<string>(type: "TEXT", nullable: false)
+                    SenderName = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {

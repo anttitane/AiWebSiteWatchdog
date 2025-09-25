@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AiWebSiteWatchDog.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250925073942_InitialCreate")]
+    [Migration("20250925075751_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -23,10 +23,6 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
             modelBuilder.Entity("AiWebSiteWatchDog.Domain.Entities.EmailSettings", b =>
                 {
                     b.Property<string>("SenderEmail")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("GmailClientSecretJson")
-                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("SenderName")

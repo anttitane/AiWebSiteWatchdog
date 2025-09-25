@@ -55,10 +55,11 @@ namespace AiWebSiteWatchDog.Infrastructure.Auth
             }
         }
 
-        public async Task<UserCredential> GetGmailAndGeminiCredentialAsync(string senderEmail, string clientSecretJson, CancellationToken ct = default)
+        public async Task<UserCredential> GetGmailAndGeminiCredentialAsync(string senderEmail, CancellationToken ct = default)
         {
+            var clientSecretJson = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET_JSON");
             if (string.IsNullOrWhiteSpace(clientSecretJson))
-                throw new ArgumentException("clientSecretJson must be provided", nameof(clientSecretJson));
+                throw new InvalidOperationException("GOOGLE_CLIENT_SECRET_JSON environment variable is required.");
 
             try
             {

@@ -6,6 +6,6 @@ namespace AiWebSiteWatchDog.Infrastructure.Auth
 {
     public interface IGoogleCredentialProvider
     {
-        Task<UserCredential> GetGmailAndGeminiCredentialAsync(string senderEmail, string clientSecretJson, CancellationToken ct = default);
+    Task<UserCredential> GetGmailAndGeminiCredentialAsync(string senderEmail, CancellationToken ct = default);
     }
 }
