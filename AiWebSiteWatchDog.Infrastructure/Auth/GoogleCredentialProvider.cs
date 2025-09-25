@@ -40,7 +40,23 @@ namespace AiWebSiteWatchDog.Infrastructure.Auth
         {
             _dbContext = dbContext;
             _config = config;
-            _useDbStore = string.Equals(Environment.GetEnvironmentVariable("USE_DB_TOKEN_STORE"), "true", StringComparison.OrdinalIgnoreCase);
+            // Read USE_DB_TOKEN_STORE preferring environment variable, then IConfiguration (user-secrets/appsettings).
+            var useDbRaw = Environment.GetEnvironmentVariable("USE_DB_TOKEN_STORE");
+            if (string.IsNullOrWhiteSpace(useDbRaw))
+                useDbRaw = _config["USE_DB_TOKEN_STORE"];
+
+            bool useDb = false;
+            if (!string.IsNullOrWhiteSpace(useDbRaw))
+            {
+                var trimmed = useDbRaw.Trim();
+                // Accept true/false (bool.TryParse), and common synonyms like "1", "yes".
+                if (!bool.TryParse(trimmed, out useDb))
+                {
+                    useDb = trimmed == "1" || trimmed.Equals("yes", StringComparison.OrdinalIgnoreCase) || trimmed.Equals("y", StringComparison.OrdinalIgnoreCase);
+                }
+            }
+
+            _useDbStore = useDb;
             if (_useDbStore)
             {
                 // Prefer environment variable, fall back to configuration (user-secrets / appsettings)
