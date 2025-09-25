@@ -1,6 +1,5 @@
 using Hangfire;
-using System.Net.Http;
-using System.Threading.Tasks;
+using System;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -12,6 +11,17 @@ using Microsoft.EntityFrameworkCore;
 Log.Logger = new LoggerConfiguration()
     .WriteTo.File("logs/AiWebSiteWatchDog.log", rollingInterval: RollingInterval.Day)
     .CreateLogger();
+
+// Simple CLI utility mode: generate encryption key and exit
+if (args.Length == 1 && string.Equals(args[0], "--generate-encryption-key", StringComparison.OrdinalIgnoreCase))
+{
+    var bytes = new byte[32]; // 256-bit AES key
+    System.Security.Cryptography.RandomNumberGenerator.Fill(bytes);
+    var b64 = Convert.ToBase64String(bytes);
+    Console.WriteLine("Base64 AES-256 key (store in GOOGLE_TOKENS_ENCRYPTION_KEY):\n" + b64);
+    Console.WriteLine("Length (bytes): 32  | IMPORTANT: keep this stable across deployments.");
+    return; // exit process
+}
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseSerilog();
