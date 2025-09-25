@@ -96,7 +96,23 @@ using (var scope = app.Services.CreateScope())
     var settings = settingsService.GetSettingsAsync().GetAwaiter().GetResult();
     if (!string.IsNullOrWhiteSpace(settings?.Schedule))
     {
-        RecurringJob.AddOrUpdate("WatchTaskJob", () => watcherService.CheckWebsiteAsync(settings), settings.Schedule);
+        // Basic validation: cron must be 5 or 6 space-separated parts (standard or with seconds)
+        var parts = settings.Schedule.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 5 || parts.Length == 6)
+        {
+            try
+            {
+                RecurringJob.AddOrUpdate("WatchTaskJob", () => watcherService.CheckWebsiteAsync(settings), settings.Schedule);
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Failed to schedule watch task with cron expression: {Schedule}", settings.Schedule);
+            }
+        }
+        else
+        {
+            Log.Warning("Invalid cron expression (wrong number of fields) in user settings: {Schedule}. Expected 5 or 6 fields. Skipping scheduling.", settings.Schedule);
+        }
     }
 }
 
