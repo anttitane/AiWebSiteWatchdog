@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AiWebSiteWatchDog.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250925075751_InitialCreate")]
+    [Migration("20250925081758_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -62,10 +62,6 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("EmailSettingsSenderEmail")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("GeminiApiKey")
                         .IsRequired()
                         .HasColumnType("TEXT");
 

@@ -62,10 +62,6 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("GeminiApiKey")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("InterestSentence")
                         .IsRequired()
                         .HasColumnType("TEXT");

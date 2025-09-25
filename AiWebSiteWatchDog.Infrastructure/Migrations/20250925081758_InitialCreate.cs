@@ -74,7 +74,6 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
                 columns: table => new
                 {
                     Email = table.Column<string>(type: "TEXT", nullable: false),
-                    GeminiApiKey = table.Column<string>(type: "TEXT", nullable: false),
                     WatchUrl = table.Column<string>(type: "TEXT", nullable: false),
                     InterestSentence = table.Column<string>(type: "TEXT", nullable: false),
                     Schedule = table.Column<string>(type: "TEXT", nullable: false),

@@ -72,7 +72,6 @@ namespace AiWebSiteWatchDog.API
                 // Provide dummy/default values for required UserSettings constructor parameters
                 var settings = new UserSettings(
                     email: "dummy@example.com",
-                    geminiApiKey: string.Empty,
                     watchUrl: task.Url,
                     interestSentence: task.InterestSentence,
                     schedule: string.Empty,
