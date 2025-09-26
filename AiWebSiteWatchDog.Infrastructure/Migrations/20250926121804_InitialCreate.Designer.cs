@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AiWebSiteWatchDog.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250925081758_InitialCreate")]
+    [Migration("20250926121804_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -58,7 +58,7 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
 
             modelBuilder.Entity("AiWebSiteWatchDog.Domain.Entities.UserSettings", b =>
                 {
-                    b.Property<string>("Email")
+                    b.Property<string>("EmailRecipient")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("EmailSettingsSenderEmail")
@@ -77,7 +77,7 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.HasKey("Email");
+                    b.HasKey("EmailRecipient");
 
                     b.HasIndex("EmailSettingsSenderEmail")
                         .IsUnique();

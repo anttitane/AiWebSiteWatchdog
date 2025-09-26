@@ -73,7 +73,7 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
                 name: "UserSettings",
                 columns: table => new
                 {
-                    Email = table.Column<string>(type: "TEXT", nullable: false),
+                    EmailRecipient = table.Column<string>(type: "TEXT", nullable: false),
                     WatchUrl = table.Column<string>(type: "TEXT", nullable: false),
                     InterestSentence = table.Column<string>(type: "TEXT", nullable: false),
                     Schedule = table.Column<string>(type: "TEXT", nullable: false),
@@ -81,7 +81,7 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_UserSettings", x => x.Email);
+                    table.PrimaryKey("PK_UserSettings", x => x.EmailRecipient);
                     table.ForeignKey(
                         name: "FK_UserSettings_EmailSettings_EmailSettingsSenderEmail",
                         column: x => x.EmailSettingsSenderEmail,

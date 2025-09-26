@@ -15,7 +15,7 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.Entity<UserSettings>().HasKey(u => u.Email);
+            modelBuilder.Entity<UserSettings>().HasKey(u => u.EmailRecipient);
             modelBuilder.Entity<EmailSettings>().HasKey(e => e.SenderEmail);
             modelBuilder.Entity<Notification>().HasKey(n => n.Id);
             modelBuilder.Entity<WatchTask>().HasKey(w => w.Id);

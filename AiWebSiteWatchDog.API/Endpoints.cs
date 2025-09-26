@@ -73,7 +73,7 @@ namespace AiWebSiteWatchDog.API
                 if (task is null) return Results.NotFound();
                 // Provide dummy/default values for required UserSettings constructor parameters
                 var settings = new UserSettings(
-                    email: "dummy@example.com",
+                    emailRecipient: "dummy@example.com",
                     watchUrl: task.Url,
                     interestSentence: task.InterestSentence,
                     schedule: string.Empty,

@@ -17,7 +17,7 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
                 {
                     Log.Warning("No settings found in database, returning default settings.");
                     return new UserSettings(
-                        email: string.Empty,
+                        emailRecipient: string.Empty,
                         watchUrl: string.Empty,
                         interestSentence: string.Empty,
                         schedule: string.Empty,
@@ -38,7 +38,7 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
         {
             try
             {
-                var existing = await _dbContext.UserSettings.Include(u => u.EmailSettings).FirstOrDefaultAsync(u => u.Email == settings.Email);
+                var existing = await _dbContext.UserSettings.Include(u => u.EmailSettings).FirstOrDefaultAsync(u => u.EmailRecipient == settings.EmailRecipient);
                 if (existing == null)
                 {
                     await _dbContext.UserSettings.AddAsync(settings);
