@@ -62,18 +62,6 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("InterestSentence")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Schedule")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("WatchUrl")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
                     b.HasKey("EmailRecipient");
 
                     b.HasIndex("EmailSettingsSenderEmail")
@@ -88,14 +76,18 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("InterestSentence")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
                     b.Property<DateTime>("LastChecked")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("LastResult")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Schedule")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TaskPrompt")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Url")

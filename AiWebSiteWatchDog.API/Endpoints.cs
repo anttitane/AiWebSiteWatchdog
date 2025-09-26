@@ -71,15 +71,7 @@ namespace AiWebSiteWatchDog.API
             {
                 var task = await repo.GetByIdAsync(id);
                 if (task is null) return Results.NotFound();
-                // Provide dummy/default values for required UserSettings constructor parameters
-                var settings = new UserSettings(
-                    emailRecipient: "dummy@example.com",
-                    watchUrl: task.Url,
-                    interestSentence: task.InterestSentence,
-                    schedule: string.Empty,
-                    emailSettingsSenderEmail: "dummy@example.com"
-                );
-                var result = await watcherService.CheckWebsiteAsync(settings);
+                var result = await watcherService.CheckWebsiteAsync(task);
                 return Results.Ok(result);
             });
 

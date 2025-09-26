@@ -10,17 +10,13 @@ namespace AiWebSiteWatchDog.Application.Services
         private readonly IGeminiApiClient _geminiApiClient = geminiApiClient;
         private readonly ISettingsService _settingsService = settingsService;
 
-        public async Task<WatchTask> CheckWebsiteAsync(UserSettings settings)
+        // Update: Now expects WatchTask as input, not UserSettings
+        public async Task<WatchTask> CheckWebsiteAsync(WatchTask task)
         {
-            var result = await _geminiApiClient.CheckInterestAsync(settings.WatchUrl, settings.InterestSentence);
-            
-            return new WatchTask
-            {
-                Url = settings.WatchUrl,
-                InterestSentence = settings.InterestSentence,
-                LastChecked = DateTime.UtcNow,
-                LastResult = result
-            };
+            var result = await _geminiApiClient.CheckInterestAsync(task.Url, task.TaskPrompt);
+            task.LastChecked = DateTime.UtcNow;
+            task.LastResult = result;
+            return task;
         }
     }
 }

@@ -5,6 +5,6 @@ namespace AiWebSiteWatchDog.Domain.Interfaces
 {
     public interface IWatcherService
     {
-        Task<WatchTask> CheckWebsiteAsync(UserSettings settings);
+        Task<WatchTask> CheckWebsiteAsync(WatchTask task);
     }
 }

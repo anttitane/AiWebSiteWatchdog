@@ -18,9 +18,6 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
                     Log.Warning("No settings found in database, returning default settings.");
                     return new UserSettings(
                         emailRecipient: string.Empty,
-                        watchUrl: string.Empty,
-                        interestSentence: string.Empty,
-                        schedule: string.Empty,
                         emailSettingsSenderEmail: string.Empty
                     );
                 }

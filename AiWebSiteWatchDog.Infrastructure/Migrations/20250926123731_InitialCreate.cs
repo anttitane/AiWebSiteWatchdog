@@ -60,7 +60,8 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     Url = table.Column<string>(type: "TEXT", nullable: false),
-                    InterestSentence = table.Column<string>(type: "TEXT", nullable: false),
+                    TaskPrompt = table.Column<string>(type: "TEXT", nullable: false),
+                    Schedule = table.Column<string>(type: "TEXT", nullable: false),
                     LastChecked = table.Column<DateTime>(type: "TEXT", nullable: false),
                     LastResult = table.Column<string>(type: "TEXT", nullable: true)
                 },
@@ -74,9 +75,6 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
                 columns: table => new
                 {
                     EmailRecipient = table.Column<string>(type: "TEXT", nullable: false),
-                    WatchUrl = table.Column<string>(type: "TEXT", nullable: false),
-                    InterestSentence = table.Column<string>(type: "TEXT", nullable: false),
-                    Schedule = table.Column<string>(type: "TEXT", nullable: false),
                     EmailSettingsSenderEmail = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
