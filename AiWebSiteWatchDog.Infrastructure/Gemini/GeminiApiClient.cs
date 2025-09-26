@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Serilog;
 using AiWebSiteWatchDog.Domain.Interfaces;
 using AiWebSiteWatchDog.Infrastructure.Auth;
-using Google.Apis.Auth.OAuth2;
 
 namespace AiWebSiteWatchDog.Infrastructure.Gemini
 {
@@ -13,7 +12,7 @@ namespace AiWebSiteWatchDog.Infrastructure.Gemini
     {
         private readonly IGoogleCredentialProvider _credentialProvider = credentialProvider;
         private readonly ISettingsService _settingsService = settingsService;
-        public async Task<string> CheckInterestAsync(string text, string interest)
+        public async Task<string> CheckInterestAsync(string text, string prompt)
         {
             var geminiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 
@@ -23,7 +22,7 @@ namespace AiWebSiteWatchDog.Infrastructure.Gemini
                 {
                     new {
                         parts = new[] {
-                            new { text = $"Here is website text:\n{text}\n\nMy interest is: {interest}\n\nDoes this contain anything interesting? Answer yes or no and explain shortly." }
+                            new { text = $"Here is website text:\n{text}\n\n{prompt}\n\n" }
                         }
                     }
                 }
@@ -46,16 +45,16 @@ namespace AiWebSiteWatchDog.Infrastructure.Gemini
                 request.Headers.Add("Authorization", $"Bearer {accessToken}");
                 request.Headers.Add("Accept", "application/json");
 
-                Log.Information("Calling Gemini API for interest '{Interest}'", interest);
+                Log.Information("Calling Gemini API with prompt '{Prompt}'", prompt);
                 var response = await http.SendAsync(request);
                 response.EnsureSuccessStatusCode();
                 var json = await response.Content.ReadAsStringAsync();
-                Log.Information("Gemini API response received for interest '{Interest}'", interest);
+                Log.Information("Gemini API response received for prompt '{Prompt}'", prompt);
                 return json;
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Gemini API call failed for interest '{Interest}'", interest);
+                Log.Error(ex, "Gemini API call failed for prompt '{Prompt}'", prompt);
                 throw;
             }
         }
