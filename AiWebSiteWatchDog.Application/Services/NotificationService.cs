@@ -13,11 +13,11 @@ namespace AiWebSiteWatchDog.Application.Services
         public async Task SendNotificationAsync(Notification notification)
         {
             var settings = await _settingsService.GetSettingsAsync();
-            if (settings.EmailSettings == null)
+            if (string.IsNullOrWhiteSpace(settings.SenderEmail))
             {
-                throw new ArgumentNullException(nameof(settings.EmailSettings), "EmailSettings cannot be null when sending notification.");
+                throw new ArgumentNullException(nameof(settings.SenderEmail), "SenderEmail cannot be empty when sending notification.");
             }
-            await _emailSender.SendAsync(notification, settings.EmailSettings, settings.EmailRecipient);
+            await _emailSender.SendAsync(notification, settings, settings.UserEmail);
         }
     }
 }

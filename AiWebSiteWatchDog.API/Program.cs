@@ -70,7 +70,6 @@ builder.Services.AddDbContext<AiWebSiteWatchDog.Infrastructure.Persistence.AppDb
 builder.Services.AddScoped<ISettingsRepository, AiWebSiteWatchDog.Infrastructure.Persistence.SQLiteSettingsRepository>();
 builder.Services.AddScoped<AiWebSiteWatchDog.Infrastructure.Persistence.NotificationRepository>();
 builder.Services.AddScoped<AiWebSiteWatchDog.Infrastructure.Persistence.WatchTaskRepository>();
-builder.Services.AddScoped<AiWebSiteWatchDog.Infrastructure.Persistence.EmailSettingsRepository>();
 builder.Services.AddScoped<AiWebSiteWatchDog.Infrastructure.Auth.IGoogleCredentialProvider, AiWebSiteWatchDog.Infrastructure.Auth.GoogleCredentialProvider>();
 builder.Services.AddScoped<IEmailSender, AiWebSiteWatchDog.Infrastructure.Email.EmailSender>();
 builder.Services.AddScoped<IGeminiApiClient, AiWebSiteWatchDog.Infrastructure.Gemini.GeminiApiClient>();
@@ -92,26 +91,27 @@ AiWebSiteWatchDog.Infrastructure.Persistence.DbInitializer.EnsureMigrated(app.Se
 using (var scope = app.Services.CreateScope())
 {
     var watcherService = scope.ServiceProvider.GetRequiredService<IWatcherService>();
-    var settingsService = scope.ServiceProvider.GetRequiredService<ISettingsService>();
-    var settings = settingsService.GetSettingsAsync().GetAwaiter().GetResult();
-    if (!string.IsNullOrWhiteSpace(settings?.Schedule))
+    var taskRepo = scope.ServiceProvider.GetRequiredService<AiWebSiteWatchDog.Infrastructure.Persistence.WatchTaskRepository>();
+    var tasks = taskRepo.GetAllAsync().GetAwaiter().GetResult();
+    foreach (var t in tasks)
     {
-        // Basic validation: cron must be 5 or 6 space-separated parts (standard or with seconds)
-        var parts = settings.Schedule.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length == 5 || parts.Length == 6)
+        if (string.IsNullOrWhiteSpace(t.Schedule)) continue;
+        var parts = t.Schedule.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length is 5 or 6)
         {
             try
             {
-                RecurringJob.AddOrUpdate("WatchTaskJob", () => watcherService.CheckWebsiteAsync(settings), settings.Schedule);
+                var recurringId = $"WatchTask_{t.Id}";
+                RecurringJob.AddOrUpdate(recurringId, () => watcherService.CheckWebsiteAsync(t), t.Schedule);
             }
             catch (Exception ex)
             {
-                Log.Warning(ex, "Failed to schedule watch task with cron expression: {Schedule}", settings.Schedule);
+                Log.Warning(ex, "Failed to schedule watch task {TaskId} with cron expression: {Schedule}", t.Id, t.Schedule);
             }
         }
         else
         {
-            Log.Warning("Invalid cron expression (wrong number of fields) in user settings: {Schedule}. Expected 5 or 6 fields. Skipping scheduling.", settings.Schedule);
+            Log.Warning("Invalid cron expression for watch task {TaskId}: {Schedule}. Expected 5 or 6 fields. Skipping.", t.Id, t.Schedule);
         }
     }
 }

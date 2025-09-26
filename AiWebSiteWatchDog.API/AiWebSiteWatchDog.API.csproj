@@ -6,6 +6,10 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Hangfire.SQLite" Version="1.4.2" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.9">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
     <ProjectReference Include="../AiWebSiteWatchDog.Domain/AiWebSiteWatchDog.Domain.csproj" />
     <ProjectReference Include="../AiWebSiteWatchDog.Application/AiWebSiteWatchDog.Application.csproj" />
     <ProjectReference Include="../AiWebSiteWatchDog.Infrastructure/AiWebSiteWatchDog.Infrastructure.csproj" />

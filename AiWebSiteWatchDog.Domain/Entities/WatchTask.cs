@@ -5,6 +5,8 @@ namespace AiWebSiteWatchDog.Domain.Entities
     public class WatchTask
     {
         public int Id { get; set; }
+        public string UserSettingsId { get; set; } = null!;
+        public UserSettings? UserSettings { get; set; }
         public required string Url { get; set; }
         public required string TaskPrompt { get; set; }
         public string Schedule { get; set; } = string.Empty; // e.g., cron expression

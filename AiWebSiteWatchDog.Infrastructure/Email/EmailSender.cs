@@ -16,13 +16,11 @@ namespace AiWebSiteWatchDog.Infrastructure.Email
     public class EmailSender(IGoogleCredentialProvider credentialProvider) : IEmailSender
     {
         private readonly IGoogleCredentialProvider _credentialProvider = credentialProvider;
-        public async Task SendAsync(Notification notification, EmailSettings emailSettings, string recipientEmail)
+        public async Task SendAsync(Notification notification, UserSettings settings, string recipientEmail)
         {
             try
             {
-                var credential = await _credentialProvider.GetGmailAndGeminiCredentialAsync(
-                    emailSettings.SenderEmail
-                );
+                var credential = await _credentialProvider.GetGmailAndGeminiCredentialAsync(settings.SenderEmail);
 
                 var service = new GmailService(new BaseClientService.Initializer
                 {
@@ -31,7 +29,7 @@ namespace AiWebSiteWatchDog.Infrastructure.Email
                 });
 
                 var emailMessage = new MimeMessage();
-                emailMessage.From.Add(new MailboxAddress(emailSettings.SenderName, emailSettings.SenderEmail));
+                emailMessage.From.Add(new MailboxAddress(settings.SenderName, settings.SenderEmail));
                 emailMessage.To.Add(new MailboxAddress("Recipient", recipientEmail));
                 emailMessage.Subject = notification.Subject;
                 emailMessage.Body = new TextPart("plain") { Text = notification.Message };

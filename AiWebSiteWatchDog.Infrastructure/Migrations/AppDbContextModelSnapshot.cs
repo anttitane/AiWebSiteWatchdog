@@ -17,20 +17,6 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.9");
 
-            modelBuilder.Entity("AiWebSiteWatchDog.Domain.Entities.EmailSettings", b =>
-                {
-                    b.Property<string>("SenderEmail")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("SenderName")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("SenderEmail");
-
-                    b.ToTable("EmailSettings");
-                });
-
             modelBuilder.Entity("AiWebSiteWatchDog.Domain.Entities.Notification", b =>
                 {
                     b.Property<int>("Id")
@@ -55,17 +41,18 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
 
             modelBuilder.Entity("AiWebSiteWatchDog.Domain.Entities.UserSettings", b =>
                 {
-                    b.Property<string>("EmailRecipient")
+                    b.Property<string>("UserEmail")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("EmailSettingsSenderEmail")
+                    b.Property<string>("SenderEmail")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.HasKey("EmailRecipient");
+                    b.Property<string>("SenderName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
 
-                    b.HasIndex("EmailSettingsSenderEmail")
-                        .IsUnique();
+                    b.HasKey("UserEmail");
 
                     b.ToTable("UserSettings");
                 });
@@ -94,7 +81,13 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("UserSettingsId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("UserSettingsId");
 
                     b.ToTable("WatchTasks");
                 });
@@ -124,15 +117,20 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
                     b.ToTable("GoogleOAuthTokens");
                 });
 
-            modelBuilder.Entity("AiWebSiteWatchDog.Domain.Entities.UserSettings", b =>
+            modelBuilder.Entity("AiWebSiteWatchDog.Domain.Entities.WatchTask", b =>
                 {
-                    b.HasOne("AiWebSiteWatchDog.Domain.Entities.EmailSettings", "EmailSettings")
-                        .WithOne()
-                        .HasForeignKey("AiWebSiteWatchDog.Domain.Entities.UserSettings", "EmailSettingsSenderEmail")
+                    b.HasOne("AiWebSiteWatchDog.Domain.Entities.UserSettings", "UserSettings")
+                        .WithMany("WatchTasks")
+                        .HasForeignKey("UserSettingsId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("EmailSettings");
+                    b.Navigation("UserSettings");
+                });
+
+            modelBuilder.Entity("AiWebSiteWatchDog.Domain.Entities.UserSettings", b =>
+                {
+                    b.Navigation("WatchTasks");
                 });
 #pragma warning restore 612, 618
         }

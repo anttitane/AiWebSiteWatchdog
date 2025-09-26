@@ -12,13 +12,14 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
         {
             try
             {
-                var settings = await _dbContext.UserSettings.Include(u => u.EmailSettings).FirstOrDefaultAsync();
+                var settings = await _dbContext.UserSettings.FirstOrDefaultAsync();
                 if (settings == null)
                 {
                     Log.Warning("No settings found in database, returning default settings.");
                     return new UserSettings(
-                        emailRecipient: string.Empty,
-                        emailSettingsSenderEmail: string.Empty
+                        userEmail: string.Empty,
+                        senderEmail: string.Empty,
+                        senderName: string.Empty
                     );
                 }
                 Log.Information("Settings loaded successfully from database.");
@@ -35,7 +36,7 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
         {
             try
             {
-                var existing = await _dbContext.UserSettings.Include(u => u.EmailSettings).FirstOrDefaultAsync(u => u.EmailRecipient == settings.EmailRecipient);
+                var existing = await _dbContext.UserSettings.FirstOrDefaultAsync(u => u.UserEmail == settings.UserEmail);
                 if (existing == null)
                 {
                     await _dbContext.UserSettings.AddAsync(settings);
@@ -43,10 +44,6 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
                 else
                 {
                     _dbContext.Entry(existing).CurrentValues.SetValues(settings);
-                    if (settings.EmailSettings != null && existing.EmailSettings != null)
-                    {
-                        _dbContext.Entry(existing.EmailSettings!).CurrentValues.SetValues(settings.EmailSettings);
-                    }
                 }
                 await _dbContext.SaveChangesAsync();
                 Log.Information("Settings saved successfully to database.");

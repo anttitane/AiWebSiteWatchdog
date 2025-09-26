@@ -23,19 +23,6 @@ namespace AiWebSiteWatchDog.API
                 return Results.Ok();
             });
 
-            // Email settings endpoints
-            app.MapGet("/email-settings/{senderEmail}", async (AiWebSiteWatchDog.Infrastructure.Persistence.EmailSettingsRepository repo, string senderEmail) =>
-            {
-                var settings = await repo.GetAsync(senderEmail);
-                return settings is not null ? Results.Ok(settings) : Results.NotFound();
-            });
-
-            app.MapPut("/email-settings", async (AiWebSiteWatchDog.Infrastructure.Persistence.EmailSettingsRepository repo, EmailSettings settings) =>
-            {
-                await repo.SaveAsync(settings);
-                return Results.Ok();
-            });
-
             // Watch tasks endpoints
             app.MapGet("/tasks", async (AiWebSiteWatchDog.Infrastructure.Persistence.WatchTaskRepository repo) =>
             {
@@ -118,9 +105,9 @@ namespace AiWebSiteWatchDog.API
                 if (string.IsNullOrWhiteSpace(senderEmail))
                 {
                     var settings = await settingsService.GetSettingsAsync();
-                    if (settings is null || string.IsNullOrWhiteSpace(settings.EmailSettingsSenderEmail))
+                    if (settings is null || string.IsNullOrWhiteSpace(settings.SenderEmail))
                         return Results.BadRequest("Sender email not configured and no senderEmail query parameter provided.");
-                    senderEmail = settings.EmailSettingsSenderEmail;
+                    senderEmail = settings.SenderEmail;
                 }
 
                 try

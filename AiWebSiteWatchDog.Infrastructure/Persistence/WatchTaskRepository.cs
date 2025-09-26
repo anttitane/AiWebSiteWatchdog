@@ -20,9 +20,22 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
 
         public async Task AddAsync(WatchTask task)
         {
+            // Ensure FK set (single user assumption)
+            if (string.IsNullOrEmpty(task.UserSettingsId))
+            {
+                var userSettings = await _dbContext.UserSettings.FirstOrDefaultAsync();
+                if (userSettings == null)
+                {
+                    // Create a default user settings row if none exists
+                    userSettings = new UserSettings(userEmail: "user@example.com", senderEmail: "user@example.com", senderName: "User");
+                    _dbContext.UserSettings.Add(userSettings);
+                    await _dbContext.SaveChangesAsync();
+                }
+                task.UserSettingsId = userSettings.UserEmail;
+            }
             await _dbContext.WatchTasks.AddAsync(task);
             await _dbContext.SaveChangesAsync();
-            Log.Information("WatchTask saved to database.");
+            Log.Information("WatchTask saved to database with UserSettingsId {UserSettingsId}.", task.UserSettingsId);
         }
 
         public async Task<bool> UpdateAsync(int id, WatchTask updated)
