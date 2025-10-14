@@ -6,10 +6,11 @@ using AiWebSiteWatchDog.Domain.DTOs;
 
 namespace AiWebSiteWatchDog.Application.Services
 {
-    public class NotificationService(IEmailSender emailSender, ISettingsService settingsService) : INotificationService
+    public class NotificationService(IEmailSender emailSender, ISettingsService settingsService, INotificationRepository notificationRepository) : INotificationService
     {
         private readonly IEmailSender _emailSender = emailSender;
         private readonly ISettingsService _settingsService = settingsService;
+        private readonly INotificationRepository _notificationRepository = notificationRepository;
 
         public async Task<NotificationDto> SendNotificationAsync(CreateNotificationRequest request)
         {
@@ -21,6 +22,7 @@ namespace AiWebSiteWatchDog.Application.Services
 
             var notification = new Notification(0, request.Subject, request.Message, DateTime.UtcNow);
             await _emailSender.SendAsync(notification, settings, settings.UserEmail);
+            await _notificationRepository.AddAsync(notification);
             return notification.ToDto();
         }
     }

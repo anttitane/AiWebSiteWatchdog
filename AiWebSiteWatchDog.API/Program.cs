@@ -68,7 +68,7 @@ builder.Services.AddDbContext<AiWebSiteWatchDog.Infrastructure.Persistence.AppDb
 
 // Register infrastructure implementations
 builder.Services.AddScoped<ISettingsRepository, AiWebSiteWatchDog.Infrastructure.Persistence.SQLiteSettingsRepository>();
-builder.Services.AddScoped<AiWebSiteWatchDog.Infrastructure.Persistence.NotificationRepository>();
+builder.Services.AddScoped<INotificationRepository, AiWebSiteWatchDog.Infrastructure.Persistence.NotificationRepository>();
 builder.Services.AddScoped<AiWebSiteWatchDog.Infrastructure.Persistence.WatchTaskRepository>();
 builder.Services.AddScoped<AiWebSiteWatchDog.Infrastructure.Auth.IGoogleCredentialProvider, AiWebSiteWatchDog.Infrastructure.Auth.GoogleCredentialProvider>();
 builder.Services.AddScoped<IEmailSender, AiWebSiteWatchDog.Infrastructure.Email.EmailSender>();

@@ -1,12 +1,13 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using AiWebSiteWatchDog.Domain.Entities;
+using AiWebSiteWatchDog.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
 namespace AiWebSiteWatchDog.Infrastructure.Persistence
 {
-    public class NotificationRepository(AppDbContext _dbContext)
+    public class NotificationRepository(AppDbContext _dbContext) : INotificationRepository
     {
         public async Task<List<Notification>> GetAllAsync()
         {
