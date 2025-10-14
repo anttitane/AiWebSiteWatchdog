@@ -10,12 +10,12 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
     {
         public async Task<List<WatchTask>> GetAllAsync()
         {
-            return await _dbContext.WatchTasks.ToListAsync();
+            return await _dbContext.WatchTasks.AsNoTracking().ToListAsync();
         }
 
         public async Task<WatchTask?> GetByIdAsync(int id)
         {
-            return await _dbContext.WatchTasks.FindAsync(id);
+            return await _dbContext.WatchTasks.AsNoTracking().FirstOrDefaultAsync(w => w.Id == id);
         }
 
         public async Task AddAsync(WatchTask task)

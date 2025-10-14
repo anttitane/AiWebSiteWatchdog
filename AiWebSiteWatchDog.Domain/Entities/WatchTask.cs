@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json.Serialization;
 
 namespace AiWebSiteWatchDog.Domain.Entities
 {
@@ -6,6 +7,7 @@ namespace AiWebSiteWatchDog.Domain.Entities
     {
         public int Id { get; set; }
         public string UserSettingsId { get; set; } = null!;
+        [JsonIgnore] // Prevent JSON cycles when serializing tasks (UserSettings contains collection of WatchTasks)
         public UserSettings? UserSettings { get; set; }
         public required string Url { get; set; }
         public required string TaskPrompt { get; set; }

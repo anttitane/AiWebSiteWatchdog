@@ -3,6 +3,7 @@ using AiWebSiteWatchDog.Domain.Entities;
 using AiWebSiteWatchDog.Domain.Interfaces;
 using Serilog;
 using Microsoft.EntityFrameworkCore;
+using System.Linq;
 
 namespace AiWebSiteWatchDog.Infrastructure.Persistence
 {
@@ -12,7 +13,9 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
         {
             try
             {
-                var settings = await _dbContext.UserSettings.FirstOrDefaultAsync();
+                var settings = await _dbContext.UserSettings
+                    .Include(u => u.WatchTasks)
+                    .FirstOrDefaultAsync();
                 if (settings == null)
                 {
                     Log.Warning("No settings found in database, returning default settings.");
@@ -36,14 +39,27 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
         {
             try
             {
-                var existing = await _dbContext.UserSettings.FirstOrDefaultAsync(u => u.UserEmail == settings.UserEmail);
+                // Enforce single-settings-row semantics (one user configuration)
+                var existing = await _dbContext.UserSettings.FirstOrDefaultAsync();
                 if (existing == null)
                 {
                     await _dbContext.UserSettings.AddAsync(settings);
                 }
                 else
                 {
-                    _dbContext.Entry(existing).CurrentValues.SetValues(settings);
+                    // If primary key (UserEmail) changes, propagate to related WatchTasks
+                    if (existing.UserEmail != settings.UserEmail)
+                    {
+                        var oldKey = existing.UserEmail;
+                        var tasks = await _dbContext.WatchTasks.Where(w => w.UserSettingsId == oldKey).ToListAsync();
+                        foreach (var t in tasks)
+                        {
+                            t.UserSettingsId = settings.UserEmail;
+                        }
+                        existing.UserEmail = settings.UserEmail; // update PK after FKs adjusted
+                    }
+                    existing.SenderEmail = settings.SenderEmail;
+                    existing.SenderName = settings.SenderName;
                 }
                 await _dbContext.SaveChangesAsync();
                 Log.Information("Settings saved successfully to database.");

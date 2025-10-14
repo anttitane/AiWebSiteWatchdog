@@ -3,7 +3,10 @@ using Microsoft.AspNetCore.Http;
 using System;
 using System.Threading;
 using AiWebSiteWatchDog.Domain.Entities;
+using AiWebSiteWatchDog.Domain.DTOs;
 using AiWebSiteWatchDog.Domain.Interfaces;
+using System.Linq;
+using System.Collections.Generic;
 
 namespace AiWebSiteWatchDog.API
 {
@@ -14,79 +17,130 @@ namespace AiWebSiteWatchDog.API
             // User settings endpoints
             app.MapGet("/settings", async (ISettingsService settingsService) =>
             {
-                return await settingsService.GetSettingsAsync();
-            });
+                var s = await settingsService.GetSettingsAsync();
+                return s is null ? Results.NotFound() : Results.Ok(s.ToDto());
+            })
+            .WithName("GetSettings")
+            .WithTags("Settings")
+            .Produces<UserSettingsDto>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status404NotFound);
 
             app.MapPut("/settings", async (ISettingsService settingsService, UserSettings settings) =>
             {
                 await settingsService.SaveSettingsAsync(settings);
                 return Results.Ok();
-            });
+            })
+            .WithName("UpdateSettings")
+            .WithTags("Settings")
+            .Accepts<UserSettings>("application/json")
+            .Produces(StatusCodes.Status200OK);
 
             // Watch tasks endpoints
             app.MapGet("/tasks", async (AiWebSiteWatchDog.Infrastructure.Persistence.WatchTaskRepository repo) =>
             {
-                return await repo.GetAllAsync();
-            });
+                var tasks = await repo.GetAllAsync();
+                return Results.Ok(tasks.Select(t => t.ToDto()));
+            })
+            .WithName("ListTasks")
+            .WithTags("Tasks")
+            .Produces<IEnumerable<WatchTaskDto>>(StatusCodes.Status200OK);
 
             app.MapPost("/tasks", async (AiWebSiteWatchDog.Infrastructure.Persistence.WatchTaskRepository repo, WatchTask task) =>
             {
                 await repo.AddAsync(task);
-                return Results.Ok();
-            });
+                return Results.Ok(task.ToDto());
+            })
+            .WithName("CreateTask")
+            .WithTags("Tasks")
+            .Accepts<WatchTask>("application/json")
+            .Produces<WatchTaskDto>(StatusCodes.Status200OK);
 
             app.MapGet("/tasks/{id}", async (AiWebSiteWatchDog.Infrastructure.Persistence.WatchTaskRepository repo, int id) =>
             {
                 var task = await repo.GetByIdAsync(id);
-                return task is not null ? Results.Ok(task) : Results.NotFound();
-            });
+                return task is not null ? Results.Ok(task.ToDto()) : Results.NotFound();
+            })
+            .WithName("GetTaskById")
+            .WithTags("Tasks")
+            .Produces<WatchTaskDto>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status404NotFound);
 
             app.MapPut("/tasks/{id}", async (AiWebSiteWatchDog.Infrastructure.Persistence.WatchTaskRepository repo, int id, WatchTask updated) =>
             {
                 var result = await repo.UpdateAsync(id, updated);
-                return result ? Results.Ok() : Results.NotFound();
-            });
+                if (!result) return Results.NotFound();
+                var task = await repo.GetByIdAsync(id);
+                return task is null ? Results.NotFound() : Results.Ok(task.ToDto());
+            })
+            .WithName("UpdateTask")
+            .WithTags("Tasks")
+            .Accepts<WatchTask>("application/json")
+            .Produces<WatchTaskDto>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status404NotFound);
 
             app.MapDelete("/tasks/{id}", async (AiWebSiteWatchDog.Infrastructure.Persistence.WatchTaskRepository repo, int id) =>
             {
                 var result = await repo.DeleteAsync(id);
                 return result ? Results.Ok() : Results.NotFound();
-            });
+            })
+            .WithName("DeleteTask")
+            .WithTags("Tasks")
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status404NotFound);
 
             // Manual trigger endpoint
             app.MapPost("/tasks/{id}/run", async (AiWebSiteWatchDog.Infrastructure.Persistence.WatchTaskRepository repo, IWatcherService watcherService, int id) =>
             {
                 var task = await repo.GetByIdAsync(id);
                 if (task is null) return Results.NotFound();
-                var result = await watcherService.CheckWebsiteAsync(task);
-                return Results.Ok(result);
-            });
+                var updated = await watcherService.CheckWebsiteAsync(task);
+                return Results.Ok(updated.ToDto());
+            })
+            .WithName("RunTask")
+            .WithTags("Tasks")
+            .Produces<WatchTaskDto>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status404NotFound);
 
             // Notifications endpoints
             app.MapGet("/notifications", async (AiWebSiteWatchDog.Infrastructure.Persistence.NotificationRepository repo) =>
             {
-                return await repo.GetAllAsync();
-            });
+                var list = await repo.GetAllAsync();
+                return Results.Ok(list.Select(n => n.ToDto()));
+            })
+            .WithName("ListNotifications")
+            .WithTags("Notifications")
+            .Produces<IEnumerable<NotificationDto>>(StatusCodes.Status200OK);
 
             app.MapGet("/notifications/{id}", async (AiWebSiteWatchDog.Infrastructure.Persistence.NotificationRepository repo, int id) =>
             {
                 var notification = await repo.GetByIdAsync(id);
-                return notification is not null ? Results.Ok(notification) : Results.NotFound();
-            });
+                return notification is not null ? Results.Ok(notification.ToDto()) : Results.NotFound();
+            })
+            .WithName("GetNotificationById")
+            .WithTags("Notifications")
+            .Produces<NotificationDto>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status404NotFound);
 
             app.MapDelete("/notifications/{id}", async (AiWebSiteWatchDog.Infrastructure.Persistence.NotificationRepository repo, int id) =>
             {
                 var result = await repo.DeleteAsync(id);
                 return result ? Results.Ok() : Results.NotFound();
-            });
+            })
+            .WithName("DeleteNotification")
+            .WithTags("Notifications")
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status404NotFound);
 
             // Send notification (trigger email)
-            app.MapPost("/notifications", async (INotificationService notificationService, ISettingsService settingsService, Notification notification) =>
+            app.MapPost("/notifications", async (INotificationService notificationService, CreateNotificationRequest request) =>
             {
-                // The notification payload no longer requires email; it will be fetched from UserSettings
-                await notificationService.SendNotificationAsync(notification);
-                return Results.Ok();
-            });
+                var dto = await notificationService.SendNotificationAsync(request);
+                return Results.Ok(dto);
+            })
+            .WithName("SendNotification")
+            .WithTags("Notifications")
+            .Accepts<CreateNotificationRequest>("application/json")
+            .Produces<NotificationDto>(StatusCodes.Status200OK);
 
             // Health/status endpoint
             app.MapGet("/health", () => Results.Ok(new { status = "Healthy" }));
