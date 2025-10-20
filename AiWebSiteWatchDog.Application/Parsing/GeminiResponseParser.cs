@@ -22,7 +22,7 @@ namespace AiWebSiteWatchDog.Application.Parsing
                         var part0 = parts[0];
                         if (part0.TryGetProperty("text", out var textEl) && textEl.ValueKind == JsonValueKind.String)
                         {
-                            return textEl.GetString();
+                            return textEl.GetString()?.TrimEnd();
                         }
                     }
                 }
@@ -45,14 +45,14 @@ namespace AiWebSiteWatchDog.Application.Parsing
                             }
                         }
                     }
-                    if (pieces.Count > 0) return string.Join("\n", pieces);
+                    if (pieces.Count > 0) return string.Join("\n", pieces).TrimEnd();
                 }
             }
             catch
             {
                 // Ignore parse errors, fallback below
             }
-            return json; // if structure unexpected, return original content
+            return json?.TrimEnd(); // if structure unexpected, return original content (trimmed)
         }
     }
 }
