@@ -12,8 +12,18 @@ namespace AiWebSiteWatchDog.Infrastructure.Gemini
     {
         private readonly IGoogleCredentialProvider _credentialProvider = credentialProvider;
         private readonly ISettingsService _settingsService = settingsService;
-        public async Task<string> CheckInterestAsync(string text, string prompt)
+        public async Task<string> CheckInterestAsync(string url, string prompt)
         {
+            // 1. Fetch site
+            using var http = new HttpClient();
+            var html = await http.GetStringAsync(url);
+
+            // 2. Strip HTML to plain text
+            var doc = new HtmlAgilityPack.HtmlDocument();
+            doc.LoadHtml(html);
+            var text = HtmlAgilityPack.HtmlEntity.DeEntitize(doc.DocumentNode.InnerText);
+
+		    // 3. Form prompt for Gemini
             var geminiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 
             var geminiBody = new
@@ -28,6 +38,7 @@ namespace AiWebSiteWatchDog.Infrastructure.Gemini
                 }
             };
 
+            // 4. Call Gemini API
             try
             {
                 var settings = await _settingsService.GetSettingsAsync();
@@ -37,7 +48,6 @@ namespace AiWebSiteWatchDog.Infrastructure.Gemini
                 var credential = await _credentialProvider.GetGmailAndGeminiCredentialAsync(senderEmail);
                 var accessToken = await credential.GetAccessTokenForRequestAsync();
 
-                using var http = new HttpClient();
                 var request = new HttpRequestMessage(HttpMethod.Post, geminiUrl)
                 {
                     Content = JsonContent.Create(geminiBody)

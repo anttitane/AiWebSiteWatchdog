@@ -4,6 +4,6 @@ namespace AiWebSiteWatchDog.Domain.Interfaces
 {
     public interface IGeminiApiClient
     {
-        Task<string> CheckInterestAsync(string text, string interest);
+        Task<string> CheckInterestAsync(string url, string interest);
     }
 }
