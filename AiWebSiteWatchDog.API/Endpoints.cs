@@ -8,6 +8,7 @@ using AiWebSiteWatchDog.Domain.Interfaces;
 using System.Linq;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Mvc;
+using AiWebSiteWatchDog.Application.Parsing;
 
 namespace AiWebSiteWatchDog.API
 {
@@ -106,7 +107,7 @@ namespace AiWebSiteWatchDog.API
 
                 // Save a notification record with the Gemini result (no email send here)
                 var subject = $"WatchTask {updated.Id} result";
-                var message = updated.LastResult ?? "(no content)";
+                var message = GeminiResponseParser.ExtractText(updated.LastResult) ?? "(no content)";
                 if (sendEmail)
                 {
                     await notificationService.SendNotificationAsync(new CreateNotificationRequest(subject, message));
@@ -200,6 +201,6 @@ namespace AiWebSiteWatchDog.API
             })
             .WithDescription("Initiate Google OAuth consent for Gmail/Gemini scopes.")
             .WithTags("auth");
-        }
+        } 
     }
 }
