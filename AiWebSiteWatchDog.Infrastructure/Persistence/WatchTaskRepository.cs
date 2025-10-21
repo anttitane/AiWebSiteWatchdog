@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using AiWebSiteWatchDog.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
+using System.Linq;
 
 namespace AiWebSiteWatchDog.Infrastructure.Persistence
 {
@@ -23,7 +24,9 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
             // Ensure FK set (single user assumption)
             if (string.IsNullOrEmpty(task.UserSettingsId))
             {
-                var userSettings = await _dbContext.UserSettings.FirstOrDefaultAsync();
+                var userSettings = await _dbContext.UserSettings
+                    .OrderBy(u => u.UserEmail)
+                    .FirstOrDefaultAsync();
                 if (userSettings == null)
                 {
                     // Create a default user settings row if none exists

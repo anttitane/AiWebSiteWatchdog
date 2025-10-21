@@ -15,6 +15,7 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
             {
                 var settings = await _dbContext.UserSettings
                     .Include(u => u.WatchTasks)
+                    .OrderBy(u => u.UserEmail)
                     .FirstOrDefaultAsync();
                 if (settings == null)
                 {
@@ -40,7 +41,9 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
             try
             {
                 // Enforce single-settings-row semantics (one user configuration)
-                var existing = await _dbContext.UserSettings.FirstOrDefaultAsync();
+                var existing = await _dbContext.UserSettings
+                    .OrderBy(u => u.UserEmail)
+                    .FirstOrDefaultAsync();
                 if (existing == null)
                 {
                     await _dbContext.UserSettings.AddAsync(settings);
