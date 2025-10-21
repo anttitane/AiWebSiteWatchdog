@@ -33,6 +33,12 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
                 }
                 task.UserSettingsId = userSettings.UserEmail;
             }
+
+            // Ensure Title has a sensible default
+            if (string.IsNullOrWhiteSpace(task.Title))
+            {
+                task.Title = string.IsNullOrWhiteSpace(task.TaskPrompt) ? task.Url : task.TaskPrompt;
+            }
             await _dbContext.WatchTasks.AddAsync(task);
             await _dbContext.SaveChangesAsync();
             Log.Information("WatchTask saved to database with UserSettingsId {UserSettingsId}.", task.UserSettingsId);
@@ -42,7 +48,28 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
         {
             var existing = await _dbContext.WatchTasks.FindAsync(id);
             if (existing == null) return false;
-            _dbContext.Entry(existing).CurrentValues.SetValues(updated);
+
+            // Update only allowed mutable fields; never modify PK or owner FK here
+            if (!string.IsNullOrWhiteSpace(updated.Title))
+                existing.Title = updated.Title.Trim();
+            else if (string.IsNullOrWhiteSpace(existing.Title))
+                existing.Title = string.IsNullOrWhiteSpace(existing.TaskPrompt) ? existing.Url : existing.TaskPrompt;
+
+            if (!string.IsNullOrWhiteSpace(updated.Url))
+                existing.Url = updated.Url;
+
+            if (!string.IsNullOrWhiteSpace(updated.TaskPrompt))
+                existing.TaskPrompt = updated.TaskPrompt;
+
+            if (updated.Schedule != null)
+                existing.Schedule = updated.Schedule;
+
+            // Optional: allow updating last check/result if provided
+            if (updated.LastChecked != default)
+                existing.LastChecked = updated.LastChecked;
+            if (updated.LastResult != null)
+                existing.LastResult = updated.LastResult;
+
             await _dbContext.SaveChangesAsync();
             return true;
         }

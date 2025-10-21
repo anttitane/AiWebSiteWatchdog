@@ -10,6 +10,7 @@ namespace AiWebSiteWatchDog.Domain.DTOs
 
     public record WatchTaskSummaryDto(
         int Id,
+        string Title,
         string Url,
         string Schedule);
 }
