@@ -1,14 +1,15 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 
 #nullable disable
 
 namespace AiWebSiteWatchDog.Infrastructure.Migrations
 {
-    /// <inheritdoc />
+    [DbContext(typeof(AiWebSiteWatchDog.Infrastructure.Persistence.AppDbContext))]
+    [Migration("20251021110000_InitialCreate")]
     public partial class InitialCreate : Migration
     {
-        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
@@ -61,6 +62,7 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     UserSettingsId = table.Column<string>(type: "TEXT", nullable: false),
+                    Title = table.Column<string>(type: "TEXT", nullable: false),
                     Url = table.Column<string>(type: "TEXT", nullable: false),
                     TaskPrompt = table.Column<string>(type: "TEXT", nullable: false),
                     Schedule = table.Column<string>(type: "TEXT", nullable: false),
@@ -90,20 +92,12 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
                 column: "UserSettingsId");
         }
 
-        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(
-                name: "GoogleOAuthTokens");
-
-            migrationBuilder.DropTable(
-                name: "Notifications");
-
-            migrationBuilder.DropTable(
-                name: "WatchTasks");
-
-            migrationBuilder.DropTable(
-                name: "UserSettings");
+            migrationBuilder.DropTable(name: "GoogleOAuthTokens");
+            migrationBuilder.DropTable(name: "Notifications");
+            migrationBuilder.DropTable(name: "WatchTasks");
+            migrationBuilder.DropTable(name: "UserSettings");
         }
     }
 }
