@@ -11,11 +11,11 @@ namespace AiWebSiteWatchDog.API.Jobs
     public class WatchTaskJobRunner(
         Infrastructure.Persistence.WatchTaskRepository repo,
         IWatcherService watcherService,
-        INotificationRepository notifications)
+        INotificationService notificationService)
     {
         private readonly Infrastructure.Persistence.WatchTaskRepository _repo = repo;
         private readonly IWatcherService _watcherService = watcherService;
-        private readonly INotificationRepository _notifications = notifications;
+        private readonly INotificationService _notificationService = notificationService;
 
         [DisableConcurrentExecution(timeoutInSeconds: 600)]
         public async Task ExecuteAsync(int id)
@@ -34,8 +34,7 @@ namespace AiWebSiteWatchDog.API.Jobs
 
             var subject = $"AiWebSiteWatchDog results for task - {updated.Title}";
             var message = GeminiResponseParser.ExtractText(updated.LastResult) ?? "(no content)";
-            var notification = new Notification(0, subject, message, DateTime.UtcNow);
-            await _notifications.AddAsync(notification);
+            await _notificationService.SendNotificationAsync(new Domain.DTOs.CreateNotificationRequest(subject, message));
         }
     }
 }
