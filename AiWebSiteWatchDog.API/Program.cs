@@ -7,6 +7,7 @@ using Serilog;
 using Hangfire.SQLite;
 using AiWebSiteWatchDog.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using AiWebSiteWatchDog.API.Jobs;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.File("logs/AiWebSiteWatchDog.log", rollingInterval: RollingInterval.Day)
@@ -33,7 +34,11 @@ builder.Services.AddHangfire(config =>
     config.UseRecommendedSerializerSettings();
     config.UseSQLiteStorage("Data Source=AiWebSiteWatchdog.db;Cache=Shared;Mode=ReadWriteCreate;", new Hangfire.SQLite.SQLiteStorageOptions());
 });
-builder.Services.AddHangfireServer();
+builder.Services.AddHangfireServer(options =>
+{
+    // Reduce parallelism to minimize duplicate concurrent executions
+    options.WorkerCount = 1;
+});
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddSwaggerGen(options =>
@@ -78,6 +83,8 @@ builder.Services.AddScoped<IGeminiApiClient, AiWebSiteWatchDog.Infrastructure.Ge
 builder.Services.AddScoped<ISettingsService, AiWebSiteWatchDog.Application.Services.SettingsService>();
 builder.Services.AddScoped<INotificationService, AiWebSiteWatchDog.Application.Services.NotificationService>();
 builder.Services.AddScoped<IWatcherService, AiWebSiteWatchDog.Application.Services.WatcherService>();
+// Register Hangfire job runner
+builder.Services.AddScoped<WatchTaskJobRunner>();
 
 var app = builder.Build();
 
@@ -90,7 +97,6 @@ AiWebSiteWatchDog.Infrastructure.Persistence.DbInitializer.EnsureMigrated(app.Se
 // Schedule the watch task using Hangfire
 using (var scope = app.Services.CreateScope())
 {
-    var watcherService = scope.ServiceProvider.GetRequiredService<IWatcherService>();
     var taskRepo = scope.ServiceProvider.GetRequiredService<AiWebSiteWatchDog.Infrastructure.Persistence.WatchTaskRepository>();
     var tasks = taskRepo.GetAllAsync().GetAwaiter().GetResult();
     foreach (var t in tasks)
@@ -102,7 +108,7 @@ using (var scope = app.Services.CreateScope())
             try
             {
                 var recurringId = $"WatchTask_{t.Id}";
-                RecurringJob.AddOrUpdate(recurringId, () => watcherService.CheckWebsiteAsync(t), t.Schedule);
+                RecurringJob.AddOrUpdate<WatchTaskJobRunner>(recurringId, r => r.ExecuteAsync(t.Id), t.Schedule);
             }
             catch (Exception ex)
             {

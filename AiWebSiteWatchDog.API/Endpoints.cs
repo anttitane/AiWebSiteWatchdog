@@ -9,7 +9,8 @@ using System.Linq;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Mvc;
 using AiWebSiteWatchDog.Application.Parsing;
-using Microsoft.EntityFrameworkCore;
+using Hangfire;
+using AiWebSiteWatchDog.API.Jobs;
 
 namespace AiWebSiteWatchDog.API
 {
@@ -63,6 +64,23 @@ namespace AiWebSiteWatchDog.API
                 if (errors.Count > 0) return Results.ValidationProblem(errors);
 
                 await repo.AddAsync(task);
+                // If a valid schedule is provided, schedule immediately
+                if (!string.IsNullOrWhiteSpace(task.Schedule))
+                {
+                    var parts = task.Schedule.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    if (parts.Length is 5 or 6)
+                    {
+                        try
+                        {
+                            var recurringId = $"WatchTask_{task.Id}";
+                            RecurringJob.AddOrUpdate<WatchTaskJobRunner>(recurringId, r => r.ExecuteAsync(task.Id), task.Schedule);
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"[WARN] Failed to schedule new task {task.Id}: {ex.Message}");
+                        }
+                    }
+                }
                 var dto = task.ToDto();
                 return Results.Created($"/tasks/{dto.Id}", dto);
             })
@@ -82,7 +100,10 @@ namespace AiWebSiteWatchDog.API
             .Produces<WatchTaskDto>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status404NotFound);
 
-            app.MapPut("/tasks/{id}", async ([FromServices] AiWebSiteWatchDog.Infrastructure.Persistence.WatchTaskRepository repo, int id, UpdateWatchTaskRequest updated) =>
+            app.MapPut("/tasks/{id}", async (
+                [FromServices] AiWebSiteWatchDog.Infrastructure.Persistence.WatchTaskRepository repo,
+                int id,
+                UpdateWatchTaskRequest updated) =>
             {
                 var existing = await repo.GetByIdAsync(id);
                 if (existing is null) return Results.NotFound();
@@ -93,6 +114,12 @@ namespace AiWebSiteWatchDog.API
                 {
                     if (string.IsNullOrWhiteSpace(updated.Title)) errors["Title"] = ["Title is required."];
                     else if (updated.Title.Length > 200) errors["Title"] = ["Title must be 200 characters or fewer."];
+                }
+                if (updated.Schedule != null)
+                {
+                    var parts = updated.Schedule.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    if (!(parts.Length is 5 or 6))
+                        errors["Schedule"] = ["Invalid cron expression. Expected 5 or 6 space-separated fields (e.g., '*/15 * * * *' or '0 8 * * *')."];
                 }
                 if (errors.Count > 0) return Results.ValidationProblem(errors);
 
@@ -107,7 +134,24 @@ namespace AiWebSiteWatchDog.API
                 var result = await repo.UpdateAsync(id, existing);
                 if (!result) return Results.NotFound();
                 var refreshed = await repo.GetByIdAsync(id);
-                return refreshed is null ? Results.NotFound() : Results.Ok(refreshed.ToDto());
+                if (refreshed is null) return Results.NotFound();
+
+                // If a new schedule was provided, (re)schedule the recurring job immediately
+                if (updated.Schedule != null)
+                {
+                    try
+                    {
+                        var recurringId = $"WatchTask_{id}";
+                        RecurringJob.AddOrUpdate<WatchTaskJobRunner>(recurringId, r => r.ExecuteAsync(id), refreshed.Schedule);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Don't fail the API response; surface scheduling issues via logs
+                        Console.WriteLine($"[WARN] Failed to (re)schedule task {id}: {ex.Message}");
+                    }
+                }
+
+                return Results.Ok(refreshed.ToDto());
             })
             .WithName("UpdateTask")
             .WithTags("Tasks")
