@@ -15,6 +15,7 @@ namespace AiWebSiteWatchDog.Domain.Entities
         public string Schedule { get; set; } = string.Empty; // e.g., cron expression
         public DateTime LastChecked { get; set; }
         public string? LastResult { get; set; }
+        public bool Enabled { get; set; } = true;
 
         public WatchTask() { }
 

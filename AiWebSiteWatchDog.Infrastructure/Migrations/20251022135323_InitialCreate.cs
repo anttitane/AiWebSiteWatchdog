@@ -1,15 +1,14 @@
-using System;
+﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 
 #nullable disable
 
 namespace AiWebSiteWatchDog.Infrastructure.Migrations
 {
-    [DbContext(typeof(AiWebSiteWatchDog.Infrastructure.Persistence.AppDbContext))]
-    [Migration("20251021110000_InitialCreate")]
+    /// <inheritdoc />
     public partial class InitialCreate : Migration
     {
+        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
@@ -67,7 +66,8 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
                     TaskPrompt = table.Column<string>(type: "TEXT", nullable: false),
                     Schedule = table.Column<string>(type: "TEXT", nullable: false),
                     LastChecked = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    LastResult = table.Column<string>(type: "TEXT", nullable: true)
+                    LastResult = table.Column<string>(type: "TEXT", nullable: true),
+                    Enabled = table.Column<bool>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -92,12 +92,20 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
                 column: "UserSettingsId");
         }
 
+        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(name: "GoogleOAuthTokens");
-            migrationBuilder.DropTable(name: "Notifications");
-            migrationBuilder.DropTable(name: "WatchTasks");
-            migrationBuilder.DropTable(name: "UserSettings");
+            migrationBuilder.DropTable(
+                name: "GoogleOAuthTokens");
+
+            migrationBuilder.DropTable(
+                name: "Notifications");
+
+            migrationBuilder.DropTable(
+                name: "WatchTasks");
+
+            migrationBuilder.DropTable(
+                name: "UserSettings");
         }
     }
 }

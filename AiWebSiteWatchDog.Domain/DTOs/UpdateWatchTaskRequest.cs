@@ -7,5 +7,6 @@ namespace AiWebSiteWatchDog.Domain.DTOs
         string? TaskPrompt,
         string? Schedule,
         System.DateTime? LastChecked,
-        string? LastResult);
+        string? LastResult,
+        bool? Enabled);
 }

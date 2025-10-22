@@ -67,6 +67,9 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
             if (updated.Schedule != null)
                 existing.Schedule = updated.Schedule;
 
+            // Enabled pause/resume toggle
+            existing.Enabled = updated.Enabled;
+
             // Optional: allow updating last check/result if provided
             if (updated.LastChecked != default)
                 existing.LastChecked = updated.LastChecked;

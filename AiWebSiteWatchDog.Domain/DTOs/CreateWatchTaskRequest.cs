@@ -5,6 +5,7 @@ namespace AiWebSiteWatchDog.Domain.DTOs
         string Title,
         string Url,
         string TaskPrompt,
-        string? Schedule
+        string? Schedule,
+        bool? Enabled
     );
 }

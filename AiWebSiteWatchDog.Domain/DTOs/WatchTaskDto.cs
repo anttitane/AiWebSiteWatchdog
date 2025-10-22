@@ -1,11 +1,12 @@
 namespace AiWebSiteWatchDog.Domain.DTOs
 {
     public record WatchTaskDto(
-    int Id,
-    string Title,
+        int Id,
+        string Title,
         string Url,
         string TaskPrompt,
         string Schedule,
         System.DateTime LastChecked,
-        string? LastResult);
+        string? LastResult,
+        bool Enabled);
 }

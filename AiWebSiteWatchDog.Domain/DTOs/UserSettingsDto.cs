@@ -12,5 +12,6 @@ namespace AiWebSiteWatchDog.Domain.DTOs
         int Id,
         string Title,
         string Url,
-        string Schedule);
+        string Schedule,
+        bool Enabled);
 }

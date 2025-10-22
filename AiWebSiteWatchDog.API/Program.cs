@@ -101,13 +101,24 @@ using (var scope = app.Services.CreateScope())
     var tasks = taskRepo.GetAllAsync().GetAwaiter().GetResult();
     foreach (var t in tasks)
     {
-        if (string.IsNullOrWhiteSpace(t.Schedule)) continue;
+        var recurringId = $"WatchTask_{t.Id}";
+        if (!t.Enabled)
+        {
+            // Ensure disabled tasks are not scheduled
+            RecurringJob.RemoveIfExists(recurringId);
+            continue;
+        }
+        if (string.IsNullOrWhiteSpace(t.Schedule))
+        {
+            // No schedule provided -> ensure no lingering job exists
+            RecurringJob.RemoveIfExists(recurringId);
+            continue;
+        }
         var parts = t.Schedule.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length is 5 or 6)
         {
             try
             {
-                var recurringId = $"WatchTask_{t.Id}";
                 RecurringJob.AddOrUpdate<WatchTaskJobRunner>(recurringId, r => r.ExecuteAsync(t.Id), t.Schedule);
             }
             catch (Exception ex)
@@ -118,6 +129,8 @@ using (var scope = app.Services.CreateScope())
         else
         {
             Log.Warning("Invalid cron expression for watch task {TaskId}: {Schedule}. Expected 5 or 6 fields. Skipping.", t.Id, t.Schedule);
+            // Also make sure any existing job is removed
+            RecurringJob.RemoveIfExists(recurringId);
         }
     }
 }

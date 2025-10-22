@@ -72,12 +72,13 @@ namespace AiWebSiteWatchDog.API
                     TaskPrompt = request.TaskPrompt,
                     Schedule = request.Schedule ?? string.Empty,
                     LastChecked = default,
-                    LastResult = null
+                    LastResult = null,
+                    Enabled = request.Enabled ?? true
                 };
 
                 await repo.AddAsync(task);
                 // If a valid schedule is provided, schedule immediately
-                if (!string.IsNullOrWhiteSpace(task.Schedule))
+                if (task.Enabled && !string.IsNullOrWhiteSpace(task.Schedule))
                 {
                     var parts = task.Schedule.Split(' ', StringSplitOptions.RemoveEmptyEntries);
                     if (parts.Length is 5 or 6)
@@ -100,7 +101,7 @@ namespace AiWebSiteWatchDog.API
             .WithTags("Tasks")
             .Accepts<CreateWatchTaskRequest>("application/json")
             .Produces<WatchTaskDto>(StatusCodes.Status201Created)
-            .WithDescription("Create a watch task. Required: title (max 200), url, taskPrompt. Optional: schedule. NOTE: Id is auto-generated and ignored. Example body: {\n  \"title\": \"Find the date for latest update\",\n  \"url\": \"https://example.com/news\",\n  \"taskPrompt\": \"From the website text, extract the latest navigation update date.\",\n  \"schedule\": \"0 8 * * *\"\n}");
+            .WithDescription("Create a watch task. Required: title (max 200), url, taskPrompt. Optional: schedule, enabled (default true). NOTE: Id is auto-generated and ignored. Example body: {\n  \"title\": \"Find the date for latest update\",\n  \"url\": \"https://example.com/news\",\n  \"taskPrompt\": \"From the website text, extract the latest navigation update date.\",\n  \"schedule\": \"0 8 * * *\",\n  \"enabled\": true\n}");
 
             app.MapGet("/tasks/{id}", async ([FromServices] AiWebSiteWatchDog.Infrastructure.Persistence.WatchTaskRepository repo, int id) =>
             {
@@ -142,19 +143,28 @@ namespace AiWebSiteWatchDog.API
                 if (updated.Schedule != null) existing.Schedule = updated.Schedule;
                 if (updated.LastChecked.HasValue) existing.LastChecked = updated.LastChecked.Value;
                 if (updated.LastResult != null) existing.LastResult = updated.LastResult;
+                if (updated.Enabled.HasValue) existing.Enabled = updated.Enabled.Value;
 
                 var result = await repo.UpdateAsync(id, existing);
                 if (!result) return Results.NotFound();
                 var refreshed = await repo.GetByIdAsync(id);
                 if (refreshed is null) return Results.NotFound();
 
-                // If a new schedule was provided, (re)schedule the recurring job immediately
-                if (updated.Schedule != null)
+                // If schedule or enabled changed, reconcile the recurring job immediately
+                if (updated.Schedule != null || updated.Enabled.HasValue)
                 {
                     try
                     {
                         var recurringId = $"WatchTask_{id}";
-                        RecurringJob.AddOrUpdate<WatchTaskJobRunner>(recurringId, r => r.ExecuteAsync(id), refreshed.Schedule);
+                        var parts2 = (refreshed.Schedule ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                        if (refreshed.Enabled && parts2.Length is 5 or 6)
+                        {
+                            RecurringJob.AddOrUpdate<WatchTaskJobRunner>(recurringId, r => r.ExecuteAsync(id), refreshed.Schedule);
+                        }
+                        else
+                        {
+                            RecurringJob.RemoveIfExists(recurringId);
+                        }
                     }
                     catch (Exception ex)
                     {
