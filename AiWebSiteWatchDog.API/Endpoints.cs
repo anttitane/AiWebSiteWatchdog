@@ -175,7 +175,14 @@ namespace AiWebSiteWatchDog.API
             app.MapDelete("/tasks/{id}", async ([FromServices] AiWebSiteWatchDog.Infrastructure.Persistence.WatchTaskRepository repo, int id) =>
             {
                 var result = await repo.DeleteAsync(id);
-                return result ? Results.Ok() : Results.NotFound();
+                if (result)
+                {
+                    // Ensure related recurring job is also removed from Hangfire
+                    var recurringId = $"WatchTask_{id}";
+                    RecurringJob.RemoveIfExists(recurringId);
+                    return Results.Ok();
+                }
+                return Results.NotFound();
             })
             .WithName("DeleteTask")
             .WithTags("Tasks")
