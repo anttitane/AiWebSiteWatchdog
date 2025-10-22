@@ -49,19 +49,31 @@ namespace AiWebSiteWatchDog.API
             .WithTags("Tasks")
             .Produces<IEnumerable<WatchTaskDto>>(StatusCodes.Status200OK);
 
-            app.MapPost("/tasks", async ([FromServices] AiWebSiteWatchDog.Infrastructure.Persistence.WatchTaskRepository repo, WatchTask task) =>
+            app.MapPost("/tasks", async ([FromServices] AiWebSiteWatchDog.Infrastructure.Persistence.WatchTaskRepository repo, CreateWatchTaskRequest request) =>
             {
                 // Validation: Title, Url, TaskPrompt are required; Title max 200 chars
                 var errors = new Dictionary<string, string[]>();
-                if (string.IsNullOrWhiteSpace(task.Title))
+                if (string.IsNullOrWhiteSpace(request.Title))
                     errors["Title"] = ["Title is required."];
-                else if (task.Title.Length > 200)
+                else if (request.Title.Length > 200)
                     errors["Title"] = ["Title must be 200 characters or fewer."];
-                if (string.IsNullOrWhiteSpace(task.Url))
+                if (string.IsNullOrWhiteSpace(request.Url))
                     errors["Url"] = ["Url is required."];
-                if (string.IsNullOrWhiteSpace(task.TaskPrompt))
+                if (string.IsNullOrWhiteSpace(request.TaskPrompt))
                     errors["TaskPrompt"] = ["TaskPrompt is required."];
                 if (errors.Count > 0) return Results.ValidationProblem(errors);
+                
+                // Map DTO to entity and let DB generate Id
+                var task = new WatchTask
+                {
+                    Id = 0,
+                    Title = request.Title.Trim(),
+                    Url = request.Url,
+                    TaskPrompt = request.TaskPrompt,
+                    Schedule = request.Schedule ?? string.Empty,
+                    LastChecked = default,
+                    LastResult = null
+                };
 
                 await repo.AddAsync(task);
                 // If a valid schedule is provided, schedule immediately
@@ -86,9 +98,9 @@ namespace AiWebSiteWatchDog.API
             })
             .WithName("CreateTask")
             .WithTags("Tasks")
-            .Accepts<WatchTask>("application/json")
+            .Accepts<CreateWatchTaskRequest>("application/json")
             .Produces<WatchTaskDto>(StatusCodes.Status201Created)
-            .WithDescription("Create a watch task. Required: title (max 200), url, taskPrompt. Optional: schedule. Example body: {\n  \"title\": \"Find the date for latest update\",\n  \"url\": \"https://example.com/news\",\n  \"taskPrompt\": \"From the website text, extract the latest navigation update date.\",\n  \"schedule\": \"0 8 * * *\"\n}");
+            .WithDescription("Create a watch task. Required: title (max 200), url, taskPrompt. Optional: schedule. NOTE: Id is auto-generated and ignored. Example body: {\n  \"title\": \"Find the date for latest update\",\n  \"url\": \"https://example.com/news\",\n  \"taskPrompt\": \"From the website text, extract the latest navigation update date.\",\n  \"schedule\": \"0 8 * * *\"\n}");
 
             app.MapGet("/tasks/{id}", async ([FromServices] AiWebSiteWatchDog.Infrastructure.Persistence.WatchTaskRepository repo, int id) =>
             {
