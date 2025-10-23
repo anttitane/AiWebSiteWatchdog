@@ -103,5 +103,13 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
             }
             return (foundIds, notFound);
         }
+
+        public async Task<int> DeleteAllAsync()
+        {
+            var tasks = await _dbContext.WatchTasks.ToListAsync();
+            if (tasks.Count == 0) return 0;
+            _dbContext.WatchTasks.RemoveRange(tasks);
+            return await _dbContext.SaveChangesAsync();
+        }
     }
 }

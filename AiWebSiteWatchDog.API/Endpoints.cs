@@ -309,6 +309,31 @@ namespace AiWebSiteWatchDog.API
             .Produces(StatusCodes.Status400BadRequest)
             .WithDescription("Delete one or multiple notifications using a comma-separated list of IDs in the path. Examples: DELETE /notifications/1 or DELETE /notifications/1,2,3");
 
+            // Delete all notifications
+            app.MapDelete("/notifications", async ([FromServices] INotificationRepository repo) =>
+            {
+                if (repo is AiWebSiteWatchDog.Infrastructure.Persistence.NotificationRepository concrete)
+                {
+                    var count = await concrete.DeleteAllAsync();
+                    return Results.Ok(new { deletedCount = count });
+                }
+                else
+                {
+                    // Fallback: delete individually
+                    var list = await repo.GetAllAsync();
+                    var deleted = 0;
+                    foreach (var n in list)
+                    {
+                        if (await repo.DeleteAsync(n.Id)) deleted++;
+                    }
+                    return Results.Ok(new { deletedCount = deleted });
+                }
+            })
+            .WithName("DeleteAllNotifications")
+            .WithTags("Notifications")
+            .Produces(StatusCodes.Status200OK)
+            .WithDescription("Delete all notifications in the system.");
+
             // Send notification (trigger email)
             app.MapPost("/notifications", async ([FromServices] INotificationService notificationService, CreateNotificationRequest request) =>
             {
@@ -322,6 +347,24 @@ namespace AiWebSiteWatchDog.API
 
             // Health/status endpoint
             app.MapGet("/health", () => Results.Ok(new { status = "Healthy" }));
+
+            // Delete all tasks
+            app.MapDelete("/tasks", async ([FromServices] AiWebSiteWatchDog.Infrastructure.Persistence.WatchTaskRepository repo) =>
+            {
+                // Remove recurring jobs first using current IDs
+                var tasks = await repo.GetAllAsync();
+                foreach (var t in tasks)
+                {
+                    RecurringJob.RemoveIfExists($"WatchTask_{t.Id}");
+                }
+
+                var count = await repo.DeleteAllAsync();
+                return Results.Ok(new { deletedCount = count });
+            })
+            .WithName("DeleteAllTasks")
+            .WithTags("Tasks")
+            .Produces(StatusCodes.Status200OK)
+            .WithDescription("Delete all tasks and remove their scheduled jobs.");
 
             // Authentication initiation endpoint (triggers Google OAuth consent if not already authorized)
             // Optional query parameter ?senderEmail= overrides stored settings sender email.
