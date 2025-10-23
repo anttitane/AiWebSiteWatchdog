@@ -7,6 +7,7 @@ using Serilog;
 using Hangfire.SQLite;
 using AiWebSiteWatchDog.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using AiWebSiteWatchDog.API.Jobs;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.File("logs/AiWebSiteWatchDog.log", rollingInterval: RollingInterval.Day)
@@ -33,7 +34,11 @@ builder.Services.AddHangfire(config =>
     config.UseRecommendedSerializerSettings();
     config.UseSQLiteStorage("Data Source=AiWebSiteWatchdog.db;Cache=Shared;Mode=ReadWriteCreate;", new Hangfire.SQLite.SQLiteStorageOptions());
 });
-builder.Services.AddHangfireServer();
+builder.Services.AddHangfireServer(options =>
+{
+    // Reduce parallelism to minimize duplicate concurrent executions
+    options.WorkerCount = 1;
+});
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddSwaggerGen(options =>
@@ -68,17 +73,18 @@ builder.Services.AddDbContext<AiWebSiteWatchDog.Infrastructure.Persistence.AppDb
 
 // Register infrastructure implementations
 builder.Services.AddScoped<ISettingsRepository, AiWebSiteWatchDog.Infrastructure.Persistence.SQLiteSettingsRepository>();
-builder.Services.AddScoped<AiWebSiteWatchDog.Infrastructure.Persistence.NotificationRepository>();
+builder.Services.AddScoped<INotificationRepository, AiWebSiteWatchDog.Infrastructure.Persistence.NotificationRepository>();
 builder.Services.AddScoped<AiWebSiteWatchDog.Infrastructure.Persistence.WatchTaskRepository>();
-builder.Services.AddScoped<AiWebSiteWatchDog.Infrastructure.Persistence.EmailSettingsRepository>();
 builder.Services.AddScoped<AiWebSiteWatchDog.Infrastructure.Auth.IGoogleCredentialProvider, AiWebSiteWatchDog.Infrastructure.Auth.GoogleCredentialProvider>();
 builder.Services.AddScoped<IEmailSender, AiWebSiteWatchDog.Infrastructure.Email.EmailSender>();
-builder.Services.AddScoped<IGeminiApiClient, AiWebSiteWatchDog.Infrastructure.Gemini.GeminiApiClient>();
+builder.Services.AddHttpClient<IGeminiApiClient, AiWebSiteWatchDog.Infrastructure.Gemini.GeminiApiClient>();
 
 // Register application services
 builder.Services.AddScoped<ISettingsService, AiWebSiteWatchDog.Application.Services.SettingsService>();
 builder.Services.AddScoped<INotificationService, AiWebSiteWatchDog.Application.Services.NotificationService>();
 builder.Services.AddScoped<IWatcherService, AiWebSiteWatchDog.Application.Services.WatcherService>();
+// Register Hangfire job runner
+builder.Services.AddScoped<WatchTaskJobRunner>();
 
 var app = builder.Build();
 
@@ -91,27 +97,40 @@ AiWebSiteWatchDog.Infrastructure.Persistence.DbInitializer.EnsureMigrated(app.Se
 // Schedule the watch task using Hangfire
 using (var scope = app.Services.CreateScope())
 {
-    var watcherService = scope.ServiceProvider.GetRequiredService<IWatcherService>();
-    var settingsService = scope.ServiceProvider.GetRequiredService<ISettingsService>();
-    var settings = settingsService.GetSettingsAsync().GetAwaiter().GetResult();
-    if (!string.IsNullOrWhiteSpace(settings?.Schedule))
+    var taskRepo = scope.ServiceProvider.GetRequiredService<AiWebSiteWatchDog.Infrastructure.Persistence.WatchTaskRepository>();
+    var tasks = taskRepo.GetAllAsync().GetAwaiter().GetResult();
+    foreach (var t in tasks)
     {
-        // Basic validation: cron must be 5 or 6 space-separated parts (standard or with seconds)
-        var parts = settings.Schedule.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length == 5 || parts.Length == 6)
+        var recurringId = $"WatchTask_{t.Id}";
+        if (!t.Enabled)
+        {
+            // Ensure disabled tasks are not scheduled
+            RecurringJob.RemoveIfExists(recurringId);
+            continue;
+        }
+        if (string.IsNullOrWhiteSpace(t.Schedule))
+        {
+            // No schedule provided -> ensure no lingering job exists
+            RecurringJob.RemoveIfExists(recurringId);
+            continue;
+        }
+        var parts = t.Schedule.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length is 5 or 6)
         {
             try
             {
-                RecurringJob.AddOrUpdate("WatchTaskJob", () => watcherService.CheckWebsiteAsync(settings), settings.Schedule);
+                RecurringJob.AddOrUpdate<WatchTaskJobRunner>(recurringId, r => r.ExecuteAsync(t.Id), t.Schedule);
             }
             catch (Exception ex)
             {
-                Log.Warning(ex, "Failed to schedule watch task with cron expression: {Schedule}", settings.Schedule);
+                Log.Warning(ex, "Failed to schedule watch task {TaskId} with cron expression: {Schedule}", t.Id, t.Schedule);
             }
         }
         else
         {
-            Log.Warning("Invalid cron expression (wrong number of fields) in user settings: {Schedule}. Expected 5 or 6 fields. Skipping scheduling.", settings.Schedule);
+            Log.Warning("Invalid cron expression for watch task {TaskId}: {Schedule}. Expected 5 or 6 fields. Skipping.", t.Id, t.Schedule);
+            // Also make sure any existing job is removed
+            RecurringJob.RemoveIfExists(recurringId);
         }
     }
 }

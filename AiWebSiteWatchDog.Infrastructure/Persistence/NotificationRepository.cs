@@ -1,12 +1,14 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using AiWebSiteWatchDog.Domain.Entities;
+using AiWebSiteWatchDog.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
+using System.Linq;
 
 namespace AiWebSiteWatchDog.Infrastructure.Persistence
 {
-    public class NotificationRepository(AppDbContext _dbContext)
+    public class NotificationRepository(AppDbContext _dbContext) : INotificationRepository
     {
         public async Task<List<Notification>> GetAllAsync()
         {
@@ -32,6 +34,29 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
             _dbContext.Notifications.Remove(existing);
             await _dbContext.SaveChangesAsync();
             return true;
+        }
+
+        public async Task<(List<int> deletedIds, List<int> notFoundIds)> DeleteManyAsync(IEnumerable<int> ids)
+        {
+            var idList = ids.Distinct().ToList();
+            if (idList.Count == 0) return (new List<int>(), new List<int>());
+            var items = await _dbContext.Notifications.Where(n => idList.Contains(n.Id)).ToListAsync();
+            var foundIds = items.Select(n => n.Id).ToList();
+            var notFound = idList.Except(foundIds).ToList();
+            if (items.Count > 0)
+            {
+                _dbContext.Notifications.RemoveRange(items);
+                await _dbContext.SaveChangesAsync();
+            }
+            return (foundIds, notFound);
+        }
+
+        public async Task<int> DeleteAllAsync()
+        {
+            var items = await _dbContext.Notifications.ToListAsync();
+            if (items.Count == 0) return 0;
+            _dbContext.Notifications.RemoveRange(items);
+            return await _dbContext.SaveChangesAsync();
         }
     }
 }

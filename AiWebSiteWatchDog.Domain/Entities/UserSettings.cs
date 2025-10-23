@@ -1,13 +1,11 @@
+using System.Collections.Generic;
 namespace AiWebSiteWatchDog.Domain.Entities
 {
-    public class UserSettings(string email, string watchUrl, string interestSentence, string schedule, string emailSettingsSenderEmail)
+    public class UserSettings(string userEmail, string senderEmail, string senderName)
     {
-        public string Email { get; set; } = email;
-        public string WatchUrl { get; set; } = watchUrl;
-        public string InterestSentence { get; set; } = interestSentence;
-        public string Schedule { get; set; } = schedule; // e.g., cron expression
-        
-        public string EmailSettingsSenderEmail { get; set; } = emailSettingsSenderEmail;
-        public EmailSettings? EmailSettings { get; set; }
+        public string UserEmail { get; set; } = userEmail;
+        public string SenderEmail { get; set; } = senderEmail;
+        public string SenderName { get; set; } = senderName;
+        public ICollection<WatchTask> WatchTasks { get; set; } = new List<WatchTask>();
     }
 }

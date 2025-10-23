@@ -12,18 +12,6 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
-                name: "EmailSettings",
-                columns: table => new
-                {
-                    SenderEmail = table.Column<string>(type: "TEXT", nullable: false),
-                    SenderName = table.Column<string>(type: "TEXT", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_EmailSettings", x => x.SenderEmail);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "GoogleOAuthTokens",
                 columns: table => new
                 {
@@ -54,39 +42,41 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "UserSettings",
+                columns: table => new
+                {
+                    UserEmail = table.Column<string>(type: "TEXT", nullable: false),
+                    SenderEmail = table.Column<string>(type: "TEXT", nullable: false),
+                    SenderName = table.Column<string>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_UserSettings", x => x.UserEmail);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "WatchTasks",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
+                    UserSettingsId = table.Column<string>(type: "TEXT", nullable: false),
+                    Title = table.Column<string>(type: "TEXT", nullable: false),
                     Url = table.Column<string>(type: "TEXT", nullable: false),
-                    InterestSentence = table.Column<string>(type: "TEXT", nullable: false),
+                    TaskPrompt = table.Column<string>(type: "TEXT", nullable: false),
+                    Schedule = table.Column<string>(type: "TEXT", nullable: false),
                     LastChecked = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    LastResult = table.Column<string>(type: "TEXT", nullable: true)
+                    LastResult = table.Column<string>(type: "TEXT", nullable: true),
+                    Enabled = table.Column<bool>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_WatchTasks", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "UserSettings",
-                columns: table => new
-                {
-                    Email = table.Column<string>(type: "TEXT", nullable: false),
-                    WatchUrl = table.Column<string>(type: "TEXT", nullable: false),
-                    InterestSentence = table.Column<string>(type: "TEXT", nullable: false),
-                    Schedule = table.Column<string>(type: "TEXT", nullable: false),
-                    EmailSettingsSenderEmail = table.Column<string>(type: "TEXT", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_UserSettings", x => x.Email);
                     table.ForeignKey(
-                        name: "FK_UserSettings_EmailSettings_EmailSettingsSenderEmail",
-                        column: x => x.EmailSettingsSenderEmail,
-                        principalTable: "EmailSettings",
-                        principalColumn: "SenderEmail",
+                        name: "FK_WatchTasks_UserSettings_UserSettingsId",
+                        column: x => x.UserSettingsId,
+                        principalTable: "UserSettings",
+                        principalColumn: "UserEmail",
                         onDelete: ReferentialAction.Cascade);
                 });
 
@@ -97,10 +87,9 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_UserSettings_EmailSettingsSenderEmail",
-                table: "UserSettings",
-                column: "EmailSettingsSenderEmail",
-                unique: true);
+                name: "IX_WatchTasks_UserSettingsId",
+                table: "WatchTasks",
+                column: "UserSettingsId");
         }
 
         /// <inheritdoc />
@@ -113,13 +102,10 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
                 name: "Notifications");
 
             migrationBuilder.DropTable(
-                name: "UserSettings");
-
-            migrationBuilder.DropTable(
                 name: "WatchTasks");
 
             migrationBuilder.DropTable(
-                name: "EmailSettings");
+                name: "UserSettings");
         }
     }
 }
