@@ -270,15 +270,44 @@ namespace AiWebSiteWatchDog.API
             .Produces<NotificationDto>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status404NotFound);
 
-            app.MapDelete("/notifications/{id}", async ([FromServices] INotificationRepository repo, int id) =>
+            // Unified delete for notifications: single or multiple IDs via comma-separated path
+            app.MapDelete("/notifications/{ids:regex(^[0-9]+(,[0-9]+)*$)}", async ([FromServices] INotificationRepository repo, string ids) =>
             {
-                var result = await repo.DeleteAsync(id);
-                return result ? Results.Ok() : Results.NotFound();
+                var parsed = ids
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Select(s => int.TryParse(s, out var v) ? v : (int?)null)
+                    .Where(v => v.HasValue)
+                    .Select(v => v!.Value)
+                    .ToList();
+
+                if (parsed.Count == 0)
+                {
+                    return Results.BadRequest(new { error = "Provide one or more numeric notification IDs in the path, e.g., /notifications/1 or /notifications/1,2,3" });
+                }
+
+                if (repo is AiWebSiteWatchDog.Infrastructure.Persistence.NotificationRepository concrete)
+                {
+                    var (deletedIds, notFoundIds) = await concrete.DeleteManyAsync(parsed);
+                    return Results.Ok(new { deletedIds, notFoundIds });
+                }
+                else
+                {
+                    // Fallback if using an implementation without bulk method
+                    var deleted = new List<int>();
+                    var missing = new List<int>();
+                    foreach (var id in parsed)
+                    {
+                        var ok = await repo.DeleteAsync(id);
+                        if (ok) deleted.Add(id); else missing.Add(id);
+                    }
+                    return Results.Ok(new { deletedIds = deleted, notFoundIds = missing });
+                }
             })
-            .WithName("DeleteNotification")
+            .WithName("DeleteNotifications")
             .WithTags("Notifications")
             .Produces(StatusCodes.Status200OK)
-            .Produces(StatusCodes.Status404NotFound);
+            .Produces(StatusCodes.Status400BadRequest)
+            .WithDescription("Delete one or multiple notifications using a comma-separated list of IDs in the path. Examples: DELETE /notifications/1 or DELETE /notifications/1,2,3");
 
             // Send notification (trigger email)
             app.MapPost("/notifications", async ([FromServices] INotificationService notificationService, CreateNotificationRequest request) =>
