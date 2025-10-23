@@ -8,15 +8,15 @@ using AiWebSiteWatchDog.Infrastructure.Auth;
 
 namespace AiWebSiteWatchDog.Infrastructure.Gemini
 {
-    public class GeminiApiClient(IGoogleCredentialProvider credentialProvider, ISettingsService settingsService) : IGeminiApiClient
+    public class GeminiApiClient(IGoogleCredentialProvider credentialProvider, ISettingsService settingsService, HttpClient http) : IGeminiApiClient
     {
         private readonly IGoogleCredentialProvider _credentialProvider = credentialProvider;
         private readonly ISettingsService _settingsService = settingsService;
+        private readonly HttpClient _http = http;
         public async Task<string> CheckInterestAsync(string url, string prompt)
         {
             // 1. Fetch site
-            using var http = new HttpClient();
-            var html = await http.GetStringAsync(url);
+            var html = await _http.GetStringAsync(url);
 
             // 2. Strip HTML to plain text
             var doc = new HtmlAgilityPack.HtmlDocument();
@@ -56,7 +56,7 @@ namespace AiWebSiteWatchDog.Infrastructure.Gemini
                 request.Headers.Add("Accept", "application/json");
 
                 Log.Information("Calling Gemini API with prompt '{Prompt}'", prompt);
-                var response = await http.SendAsync(request);
+                var response = await _http.SendAsync(request);
                 response.EnsureSuccessStatusCode();
                 var json = await response.Content.ReadAsStringAsync();
                 Log.Information("Gemini API response received for prompt '{Prompt}'", prompt);
