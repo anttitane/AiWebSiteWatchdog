@@ -16,6 +16,7 @@ namespace AiWebSiteWatchDog.API.Jobs
         private readonly Infrastructure.Persistence.WatchTaskRepository _repo = repo;
         private readonly IWatcherService _watcherService = watcherService;
         private readonly INotificationService _notificationService = notificationService;
+        private const int MinimumExecutionIntervalSeconds = 30; // guard window to avoid rapid re-entry
 
         [DisableConcurrentExecution(timeoutInSeconds: 600)]
         public async Task ExecuteAsync(int id)
@@ -23,7 +24,7 @@ namespace AiWebSiteWatchDog.API.Jobs
             var task = await _repo.GetByIdAsync(id);
             if (task is null) return;
             // Guard against accidental rapid re-entry (e.g., duplicate enqueues)
-            if (task.LastChecked != default && task.LastChecked > DateTime.UtcNow.AddSeconds(-30))
+            if (task.LastChecked != default && task.LastChecked > DateTime.UtcNow.AddSeconds(-MinimumExecutionIntervalSeconds))
             {
                 Log.Warning("Skipping task {TaskId} because it was executed recently at {LastChecked}", id, task.LastChecked);
                 return;
