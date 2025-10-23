@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Mvc;
 using AiWebSiteWatchDog.Application.Parsing;
 using Hangfire;
 using AiWebSiteWatchDog.API.Jobs;
+using Serilog;
 
 namespace AiWebSiteWatchDog.API
 {
@@ -90,7 +91,7 @@ namespace AiWebSiteWatchDog.API
                         }
                         catch (Exception ex)
                         {
-                            Console.WriteLine($"[WARN] Failed to schedule new task {task.Id}: {ex.Message}");
+                            Log.Warning(ex, "Failed to schedule new task {TaskId} with cron expression: {Schedule}", task.Id, task.Schedule);
                         }
                     }
                 }
@@ -169,7 +170,7 @@ namespace AiWebSiteWatchDog.API
                     catch (Exception ex)
                     {
                         // Don't fail the API response; surface scheduling issues via logs
-                        Console.WriteLine($"[WARN] Failed to (re)schedule task {id}: {ex.Message}");
+                        Log.Warning(ex, "Failed to (re)schedule task {TaskId} with cron expression: {Schedule}", id, refreshed.Schedule);
                     }
                 }
 
