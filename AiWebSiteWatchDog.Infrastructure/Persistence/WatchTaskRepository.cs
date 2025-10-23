@@ -88,5 +88,20 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
             await _dbContext.SaveChangesAsync();
             return true;
         }
+
+        public async Task<(List<int> deletedIds, List<int> notFoundIds)> DeleteManyAsync(IEnumerable<int> ids)
+        {
+            var idList = ids.Distinct().ToList();
+            if (idList.Count == 0) return (new List<int>(), new List<int>());
+            var tasks = await _dbContext.WatchTasks.Where(w => idList.Contains(w.Id)).ToListAsync();
+            var foundIds = tasks.Select(t => t.Id).ToList();
+            var notFound = idList.Except(foundIds).ToList();
+            if (tasks.Count > 0)
+            {
+                _dbContext.WatchTasks.RemoveRange(tasks);
+                await _dbContext.SaveChangesAsync();
+            }
+            return (foundIds, notFound);
+        }
     }
 }

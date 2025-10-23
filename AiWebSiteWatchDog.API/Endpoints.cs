@@ -182,22 +182,38 @@ namespace AiWebSiteWatchDog.API
             .Produces(StatusCodes.Status404NotFound)
             .WithDescription("Update a watch task. All fields are optional; only provided fields are updated. If title is provided, it must be non-empty and max 200. Example body (title only): {\n  \"title\": \"Find the date for latest update\"\n}");
 
-            app.MapDelete("/tasks/{id}", async ([FromServices] AiWebSiteWatchDog.Infrastructure.Persistence.WatchTaskRepository repo, int id) =>
+            // Unified delete: single or multiple IDs via comma-separated path parameter
+            // Matches: /tasks/1 or /tasks/1,2,3
+            app.MapDelete("/tasks/{ids:regex(^[0-9]+(,[0-9]+)*$)}", async (
+                [FromServices] AiWebSiteWatchDog.Infrastructure.Persistence.WatchTaskRepository repo,
+                string ids) =>
             {
-                var result = await repo.DeleteAsync(id);
-                if (result)
+                var parsed = ids
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Select(s => int.TryParse(s, out var v) ? v : (int?)null)
+                    .Where(v => v.HasValue)
+                    .Select(v => v!.Value)
+                    .ToList();
+
+                if (parsed.Count == 0)
                 {
-                    // Ensure related recurring job is also removed from Hangfire
-                    var recurringId = $"WatchTask_{id}";
-                    RecurringJob.RemoveIfExists(recurringId);
-                    return Results.Ok();
+                    return Results.BadRequest(new { error = "Provide one or more numeric task IDs in the path, e.g., /tasks/1 or /tasks/1,2,3" });
                 }
-                return Results.NotFound();
+
+                var (deletedIds, notFoundIds) = await repo.DeleteManyAsync(parsed);
+
+                foreach (var did in deletedIds)
+                {
+                    RecurringJob.RemoveIfExists($"WatchTask_{did}");
+                }
+
+                return Results.Ok(new { deletedIds, notFoundIds });
             })
-            .WithName("DeleteTask")
+            .WithName("DeleteTasks")
             .WithTags("Tasks")
             .Produces(StatusCodes.Status200OK)
-            .Produces(StatusCodes.Status404NotFound);
+            .Produces(StatusCodes.Status400BadRequest)
+            .WithDescription("Delete one or multiple tasks using a comma-separated list of IDs in the path. Examples: DELETE /tasks/1 or DELETE /tasks/1,2,3");
 
             // Manual trigger endpoint
             app.MapPost("/tasks/{id}/run", async ([FromServices] AiWebSiteWatchDog.Infrastructure.Persistence.WatchTaskRepository repo,
