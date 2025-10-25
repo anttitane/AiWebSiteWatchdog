@@ -2,5 +2,7 @@
   <PropertyGroup>
     <!-- Enable Central Package Management for this repository -->
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <!-- Centralize target framework for all projects here -->
+    <TargetFramework>net9.0</TargetFramework>
   </PropertyGroup>
 </Project>
