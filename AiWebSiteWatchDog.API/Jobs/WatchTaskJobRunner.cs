@@ -12,11 +12,13 @@ namespace AiWebSiteWatchDog.API.Jobs
     public class WatchTaskJobRunner(
         Infrastructure.Persistence.WatchTaskRepository repo,
         IWatcherService watcherService,
-        INotificationService notificationService)
+        INotificationService notificationService,
+        INotificationRepository notificationRepository)
     {
         private readonly Infrastructure.Persistence.WatchTaskRepository _repo = repo;
         private readonly IWatcherService _watcherService = watcherService;
         private readonly INotificationService _notificationService = notificationService;
+        private readonly INotificationRepository _notificationRepository = notificationRepository;
         private const int MinimumExecutionIntervalSeconds = 30; // guard window to avoid rapid re-entry
 
         [DisableConcurrentExecution(timeoutInSeconds: 600)]
@@ -43,31 +45,42 @@ namespace AiWebSiteWatchDog.API.Jobs
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Scheduled task {TaskId} failed", id);
+                // Create correlation id to surface to users without leaking internals
+                var correlationId = Guid.NewGuid().ToString("N");
+                Log.Error(ex, "Scheduled task {TaskId} failed (cid={CorrelationId})", id, correlationId);
 
-                // Persist basic failure info so UI and audits show the error
+                // Persist sanitized failure info so UI shows a useful reference (avoid storing full stack traces)
                 try
                 {
                     task.LastChecked = DateTime.UtcNow;
-                    var errObj = new { error = ex.Message, details = ex.ToString() };
+                    var errObj = new { correlationId, error = ex.Message };
                     task.LastResult = JsonSerializer.Serialize(errObj);
                     await _repo.UpdateAsync(id, task);
                 }
                 catch (Exception persistEx)
                 {
-                    Log.Error(persistEx, "Failed to persist failure result for task {TaskId}", id);
+                    Log.Error(persistEx, "Failed to persist failure result for task {TaskId} (cid={CorrelationId})", id, correlationId);
                 }
 
-                // Notify user by email about the failed run. If notification sending fails, log and move on.
+                // Notify user by email with a generic message containing the correlation id. If sending fails, fall back to saving a notification record.
+                var subject = $"AiWebSiteWatchDog - task FAILED - {task.Title}";
+                var message = $"The scheduled task '{task.Title}' (id={task.Id}) failed at {DateTime.UtcNow:u}.\n\nReference: {correlationId}\n\nCheck application logs for details.";
                 try
                 {
-                    var subject = $"AiWebSiteWatchDog - task FAILED - {task.Title}";
-                    var message = $"The scheduled task '{task.Title}' (id={task.Id}) failed at {DateTime.UtcNow:u}.\n\nError: {ex.Message}\n\nCheck application logs for details.";
                     await _notificationService.SendNotificationAsync(new Domain.DTOs.CreateNotificationRequest(subject, message));
                 }
                 catch (Exception notifyEx)
                 {
-                    Log.Error(notifyEx, "Failed to send failure notification for task {TaskId}", id);
+                    Log.Error(notifyEx, "Failed to send failure notification for task {TaskId} (cid={CorrelationId})", id, correlationId);
+                    try
+                    {
+                        var fallback = new Domain.Entities.Notification(0, subject, message, DateTime.UtcNow);
+                        await _notificationRepository.AddAsync(fallback);
+                    }
+                    catch (Exception saveEx)
+                    {
+                        Log.Error(saveEx, "Failed to save fallback notification for task {TaskId} (cid={CorrelationId})", id, correlationId);
+                    }
                 }
             }
         }
