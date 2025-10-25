@@ -252,45 +252,7 @@ namespace AiWebSiteWatchDog.API
                 }
                 catch (Exception ex)
                 {
-                    // Create a short correlation id for lookup without exposing internals to clients
-                    var correlationId = Guid.NewGuid().ToString("N");
-                    Log.Error(ex, "Manual run for task {TaskId} failed (cid={CorrelationId})", id, correlationId);
-
-                    // Persist failure info to the task LastResult (include correlation id)
-                    try
-                    {
-                        task.LastChecked = DateTime.UtcNow;
-                        var errObj = new { correlationId, error = ex.Message };
-                        task.LastResult = System.Text.Json.JsonSerializer.Serialize(errObj);
-                        await repo.UpdateAsync(id, task);
-                    }
-                    catch (Exception persistEx)
-                    {
-                        Log.Error(persistEx, "Failed to persist failure result for task {TaskId} (cid={CorrelationId})", id, correlationId);
-                    }
-
-                    // Attempt to notify user by email; if that fails, save a notification record as fallback
-                    var notifySubject = $"AiWebSiteWatchDog - task FAILED - {task.Title}";
-                    var notifyMessage = $"The manual run for '{task.Title}' (id={task.Id}) failed at {DateTime.UtcNow:u}.\n\nReference: {correlationId}\n\nCheck application logs for details.";
-                    try
-                    {
-                        await notificationService.SendNotificationAsync(new CreateNotificationRequest(notifySubject, notifyMessage));
-                    }
-                    catch (Exception notifyEx)
-                    {
-                        Log.Error(notifyEx, "Failed to send failure notification for task {TaskId} (cid={CorrelationId})", id, correlationId);
-                        try
-                        {
-                            var fallback = new Notification(0, notifySubject, notifyMessage, DateTime.UtcNow);
-                            await notifications.AddAsync(fallback);
-                        }
-                        catch (Exception saveEx)
-                        {
-                            Log.Error(saveEx, "Failed to save fallback notification for task {TaskId} (cid={CorrelationId})", id, correlationId);
-                        }
-                    }
-
-                    // Return a generic error message with the correlation id for support lookup
+                    var correlationId = await AiWebSiteWatchDog.API.Utils.FailureHandler.HandleFailureAsync(ex, task, id, repo, notificationService, notifications, "manual run");
                     return Results.Problem(title: "Task run failed", detail: $"An internal error occurred. Reference: {correlationId}", statusCode: 500);
                 }
             })

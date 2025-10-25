@@ -45,43 +45,8 @@ namespace AiWebSiteWatchDog.API.Jobs
             }
             catch (Exception ex)
             {
-                // Create correlation id to surface to users without leaking internals
-                var correlationId = Guid.NewGuid().ToString("N");
-                Log.Error(ex, "Scheduled task {TaskId} failed (cid={CorrelationId})", id, correlationId);
-
-                // Persist sanitized failure info so UI shows a useful reference (avoid storing full stack traces)
-                try
-                {
-                    task.LastChecked = DateTime.UtcNow;
-                    var errObj = new { correlationId, error = ex.Message };
-                    task.LastResult = JsonSerializer.Serialize(errObj);
-                    await _repo.UpdateAsync(id, task);
-                }
-                catch (Exception persistEx)
-                {
-                    Log.Error(persistEx, "Failed to persist failure result for task {TaskId} (cid={CorrelationId})", id, correlationId);
-                }
-
-                // Notify user by email with a generic message containing the correlation id. If sending fails, fall back to saving a notification record.
-                var subject = $"AiWebSiteWatchDog - task FAILED - {task.Title}";
-                var message = $"The scheduled task '{task.Title}' (id={task.Id}) failed at {DateTime.UtcNow:u}.\n\nReference: {correlationId}\n\nCheck application logs for details.";
-                try
-                {
-                    await _notificationService.SendNotificationAsync(new Domain.DTOs.CreateNotificationRequest(subject, message));
-                }
-                catch (Exception notifyEx)
-                {
-                    Log.Error(notifyEx, "Failed to send failure notification for task {TaskId} (cid={CorrelationId})", id, correlationId);
-                    try
-                    {
-                        var fallback = new Domain.Entities.Notification(0, subject, message, DateTime.UtcNow);
-                        await _notificationRepository.AddAsync(fallback);
-                    }
-                    catch (Exception saveEx)
-                    {
-                        Log.Error(saveEx, "Failed to save fallback notification for task {TaskId} (cid={CorrelationId})", id, correlationId);
-                    }
-                }
+                // Delegate failure handling to shared helper to avoid duplication
+                await AiWebSiteWatchDog.API.Utils.FailureHandler.HandleFailureAsync(ex, task, id, _repo, _notificationService, _notificationRepository, "scheduled task");
             }
         }
     }
