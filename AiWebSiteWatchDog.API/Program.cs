@@ -117,10 +117,11 @@ using (var scope = app.Services.CreateScope())
         var parts = t.Schedule.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length is 5 or 6)
         {
-            try
-            {
-                RecurringJob.AddOrUpdate<WatchTaskJobRunner>(recurringId, r => r.ExecuteAsync(t.Id), t.Schedule);
-            }
+                try
+                {
+                    var options = new RecurringJobOptions { TimeZone = TimeZoneInfo.Local };
+                    RecurringJob.AddOrUpdate<WatchTaskJobRunner>(recurringId, r => r.ExecuteAsync(t.Id), t.Schedule, options);
+                }
             catch (Exception ex)
             {
                 Log.Warning(ex, "Failed to schedule watch task {TaskId} with cron expression: {Schedule}", t.Id, t.Schedule);

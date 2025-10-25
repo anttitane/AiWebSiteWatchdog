@@ -87,7 +87,8 @@ namespace AiWebSiteWatchDog.API
                         try
                         {
                             var recurringId = $"WatchTask_{task.Id}";
-                            RecurringJob.AddOrUpdate<WatchTaskJobRunner>(recurringId, r => r.ExecuteAsync(task.Id), task.Schedule);
+                            var _opts = new RecurringJobOptions { TimeZone = TimeZoneInfo.Local };
+                            RecurringJob.AddOrUpdate<WatchTaskJobRunner>(recurringId, r => r.ExecuteAsync(task.Id), task.Schedule, _opts);
                         }
                         catch (Exception ex)
                         {
@@ -160,7 +161,8 @@ namespace AiWebSiteWatchDog.API
                         var parts2 = (refreshed.Schedule ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries);
                         if (refreshed.Enabled && parts2.Length is 5 or 6)
                         {
-                            RecurringJob.AddOrUpdate<WatchTaskJobRunner>(recurringId, r => r.ExecuteAsync(id), refreshed.Schedule);
+                            var _opts2 = new RecurringJobOptions { TimeZone = TimeZoneInfo.Local };
+                            RecurringJob.AddOrUpdate<WatchTaskJobRunner>(recurringId, r => r.ExecuteAsync(id), refreshed.Schedule, _opts2);
                         }
                         else
                         {
