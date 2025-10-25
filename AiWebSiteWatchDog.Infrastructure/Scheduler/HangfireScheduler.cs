@@ -8,7 +8,8 @@ namespace AiWebSiteWatchDog.Infrastructure.Scheduler
     {
         public void ScheduleJob(string recurringJobId, string cronExpression, Func<Task> job)
         {
-            var options = new RecurringJobOptions();
+            // Use local time zone so cron expressions match server local time
+            var options = new RecurringJobOptions { TimeZone = TimeZoneInfo.Local };
             RecurringJob.AddOrUpdate(recurringJobId, () => job(), cronExpression, options);
         }
     }
