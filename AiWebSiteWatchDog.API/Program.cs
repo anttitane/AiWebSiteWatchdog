@@ -40,7 +40,6 @@ builder.Services.AddHangfireServer(options =>
     options.WorkerCount = 1;
 });
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
 builder.Services.AddSwaggerGen(options =>
 {
     options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
@@ -136,14 +135,15 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-// Enable Swagger middleware
+// Register API endpoints from separate file
+AiWebSiteWatchDog.API.Endpoints.MapApiEndpoints(app);
+
+// Enable Swagger middleware AFTER endpoints are mapped so the OpenAPI generator
+// can pick up minimal API endpoints and produce a valid document.
 if (app.Environment.IsDevelopment() || app.Environment.IsStaging() || app.Environment.IsProduction())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
-// Register API endpoints from separate file
-AiWebSiteWatchDog.API.Endpoints.MapApiEndpoints(app);
 
 app.Run();

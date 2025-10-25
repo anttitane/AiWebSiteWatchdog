@@ -1,20 +1,19 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <UserSecretsId>1239d324-79f5-40ab-8ae6-8735aba19463</UserSecretsId>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Hangfire.SQLite" Version="1.4.2" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.9">
+    <PackageReference Include="Hangfire.SQLite" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <ProjectReference Include="../AiWebSiteWatchDog.Domain/AiWebSiteWatchDog.Domain.csproj" />
     <ProjectReference Include="../AiWebSiteWatchDog.Application/AiWebSiteWatchDog.Application.csproj" />
     <ProjectReference Include="../AiWebSiteWatchDog.Infrastructure/AiWebSiteWatchDog.Infrastructure.csproj" />
-  <PackageReference Include="Swashbuckle.AspNetCore" Version="7.1.0" />
-    <PackageReference Include="Serilog.AspNetCore" Version="8.0.0" />
-    <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
+  <PackageReference Include="Swashbuckle.AspNetCore" />
+    <PackageReference Include="Serilog.AspNetCore" />
+    <PackageReference Include="Serilog.Sinks.File" />
   </ItemGroup>
 </Project>
