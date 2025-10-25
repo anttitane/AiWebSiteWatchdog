@@ -228,24 +228,68 @@ namespace AiWebSiteWatchDog.API
             {
                 var task = await repo.GetByIdAsync(id);
                 if (task is null) return Results.NotFound();
-                var updated = await watcherService.CheckWebsiteAsync(task);
-                // Persist the updated task state
-                await repo.UpdateAsync(id, updated);
 
-                // Save a notification record with the Gemini result (no email send here)
-                var subject = $"AiWebSiteWatchDog results for task - {updated.Title}";
-                var message = GeminiResponseParser.ExtractText(updated.LastResult) ?? "(no content)";
-                if (sendEmail)
+                try
                 {
-                    await notificationService.SendNotificationAsync(new CreateNotificationRequest(subject, message));
-                }
-                else
-                {
-                    var notification = new Notification(0, subject, message, DateTime.UtcNow);
-                    await notifications.AddAsync(notification);
-                }
+                    var updated = await watcherService.CheckWebsiteAsync(task);
+                    // Persist the updated task state
+                    await repo.UpdateAsync(id, updated);
 
-                return Results.Ok(updated.ToDto());
+                    // Save a notification record with the Gemini result (no email send here)
+                    var subject = $"AiWebSiteWatchDog results for task - {updated.Title}";
+                    var message = GeminiResponseParser.ExtractText(updated.LastResult) ?? "(no content)";
+                    if (sendEmail)
+                    {
+                        await notificationService.SendNotificationAsync(new CreateNotificationRequest(subject, message));
+                    }
+                    else
+                    {
+                        var notification = new Notification(0, subject, message, DateTime.UtcNow);
+                        await notifications.AddAsync(notification);
+                    }
+
+                    return Results.Ok(updated.ToDto());
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "Manual run for task {TaskId} failed", id);
+
+                    // Persist failure info to the task LastResult
+                    try
+                    {
+                        task.LastChecked = DateTime.UtcNow;
+                        var errObj = new { error = ex.Message, details = ex.ToString() };
+                        task.LastResult = System.Text.Json.JsonSerializer.Serialize(errObj);
+                        await repo.UpdateAsync(id, task);
+                    }
+                    catch (Exception persistEx)
+                    {
+                        Log.Error(persistEx, "Failed to persist failure result for task {TaskId}", id);
+                    }
+
+                    // Attempt to notify user by email; if that fails, save a notification record as fallback
+                    var notifySubject = $"AiWebSiteWatchDog - task FAILED - {task.Title}";
+                    var notifyMessage = $"The manual run for '{task.Title}' (id={task.Id}) failed at {DateTime.UtcNow:u}.\n\nError: {ex.Message}\n\nCheck application logs for details.";
+                    try
+                    {
+                        await notificationService.SendNotificationAsync(new CreateNotificationRequest(notifySubject, notifyMessage));
+                    }
+                    catch (Exception notifyEx)
+                    {
+                        Log.Error(notifyEx, "Failed to send failure notification for task {TaskId}", id);
+                        try
+                        {
+                            var fallback = new Notification(0, notifySubject, notifyMessage, DateTime.UtcNow);
+                            await notifications.AddAsync(fallback);
+                        }
+                        catch (Exception saveEx)
+                        {
+                            Log.Error(saveEx, "Failed to save fallback notification for task {TaskId}", id);
+                        }
+                    }
+
+                    return Results.Problem(title: "Task run failed", detail: ex.Message, statusCode: 500);
+                }
             })
             .WithName("RunTask")
             .WithTags("Tasks")
