@@ -228,24 +228,33 @@ namespace AiWebSiteWatchDog.API
             {
                 var task = await repo.GetByIdAsync(id);
                 if (task is null) return Results.NotFound();
-                var updated = await watcherService.CheckWebsiteAsync(task);
-                // Persist the updated task state
-                await repo.UpdateAsync(id, updated);
 
-                // Save a notification record with the Gemini result (no email send here)
-                var subject = $"AiWebSiteWatchDog results for task - {updated.Title}";
-                var message = GeminiResponseParser.ExtractText(updated.LastResult) ?? "(no content)";
-                if (sendEmail)
+                try
                 {
-                    await notificationService.SendNotificationAsync(new CreateNotificationRequest(subject, message));
-                }
-                else
-                {
-                    var notification = new Notification(0, subject, message, DateTime.UtcNow);
-                    await notifications.AddAsync(notification);
-                }
+                    var updated = await watcherService.CheckWebsiteAsync(task);
+                    // Persist the updated task state
+                    await repo.UpdateAsync(id, updated);
 
-                return Results.Ok(updated.ToDto());
+                    // Save a notification record with the Gemini result (no email send here)
+                    var subject = $"AiWebSiteWatchDog results for task - {updated.Title}";
+                    var message = GeminiResponseParser.ExtractText(updated.LastResult) ?? "(no content)";
+                    if (sendEmail)
+                    {
+                        await notificationService.SendNotificationAsync(new CreateNotificationRequest(subject, message));
+                    }
+                    else
+                    {
+                        var notification = new Notification(0, subject, message, DateTime.UtcNow);
+                        await notifications.AddAsync(notification);
+                    }
+
+                    return Results.Ok(updated.ToDto());
+                }
+                catch (Exception ex)
+                {
+                    var correlationId = await AiWebSiteWatchDog.API.Utils.FailureHandler.HandleFailureAsync(ex, task, id, repo, notificationService, notifications, "manual run");
+                    return Results.Problem(title: "Task run failed", detail: $"An internal error occurred. Reference: {correlationId}", statusCode: 500);
+                }
             })
             .WithName("RunTask")
             .WithTags("Tasks")
