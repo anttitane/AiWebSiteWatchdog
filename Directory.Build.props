@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <!-- Enable Central Package Management for this repository -->
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+</Project>
