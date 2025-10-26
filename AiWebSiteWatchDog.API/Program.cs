@@ -4,14 +4,14 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
+using Microsoft.Extensions.Configuration;
 using Hangfire.SQLite;
 using AiWebSiteWatchDog.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using AiWebSiteWatchDog.API.Jobs;
 
-Log.Logger = new LoggerConfiguration()
-    .WriteTo.File("logs/AiWebSiteWatchDog.log", rollingInterval: RollingInterval.Day)
-    .CreateLogger();
+// Serilog will be configured from appsettings.json via UseSerilog below so
+// logging configuration can be adjusted without recompiling.
 
 // Simple CLI utility mode: generate encryption key and exit
 if (args.Length == 1 && string.Equals(args[0], "--generate-encryption-key", StringComparison.OrdinalIgnoreCase))
@@ -24,20 +24,30 @@ if (args.Length == 1 && string.Equals(args[0], "--generate-encryption-key", Stri
     return; // exit process
 }
 
-var builder = WebApplication.CreateBuilder(args);
-builder.Host.UseSerilog();
+var builder = WebApplication.CreateBuilder(new WebApplicationOptions { Args = args });
+// Replace the default logging with Serilog configured from appsettings.json
+builder.Host.UseSerilog((ctx, services, loggerConfig) =>
+{
+    // Ensure Serilog reads from the same configuration source the app uses
+    loggerConfig.ReadFrom.Configuration(ctx.Configuration);
+    loggerConfig.Enrich.FromLogContext();
+});
 
 // Add Hangfire services (after builder declaration)
+// Configure Hangfire using connection string from configuration
 builder.Services.AddHangfire(config =>
 {
     config.UseSimpleAssemblyNameTypeSerializer();
     config.UseRecommendedSerializerSettings();
-    config.UseSQLiteStorage("Data Source=AiWebSiteWatchdog.db;Cache=Shared;Mode=ReadWriteCreate;", new Hangfire.SQLite.SQLiteStorageOptions());
+    var hangfireConn = builder.Configuration.GetConnectionString("HangfireConnection")
+                      ?? builder.Configuration.GetConnectionString("DefaultConnection")
+                      ?? "Data Source=AiWebSiteWatchdog.db;Cache=Shared;Mode=ReadWriteCreate;";
+    config.UseSQLiteStorage(hangfireConn, new Hangfire.SQLite.SQLiteStorageOptions());
 });
 builder.Services.AddHangfireServer(options =>
 {
     // Reduce parallelism to minimize duplicate concurrent executions
-    options.WorkerCount = 1;
+    options.WorkerCount = builder.Configuration.GetValue<int?>("Hangfire:WorkerCount") ?? 1;
 });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -66,9 +76,10 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-// Register EF Core DbContext
+// Register EF Core DbContext using connection string from configuration
+var defaultConn = builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=AiWebSiteWatchdog.db";
 builder.Services.AddDbContext<AiWebSiteWatchDog.Infrastructure.Persistence.AppDbContext>(options =>
-    options.UseSqlite("Data Source=AiWebSiteWatchdog.db"));
+    options.UseSqlite(defaultConn));
 
 // Register infrastructure implementations
 builder.Services.AddScoped<ISettingsRepository, AiWebSiteWatchDog.Infrastructure.Persistence.SQLiteSettingsRepository>();

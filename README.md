@@ -1,29 +1,54 @@
 # AiWebSiteWatchdog
 
-AI powered .NET app which scans regularly predefined set of web sites and searches predefined interests
+Motivation
+----------
 
----
+Have you ever needed to check a website regularly to see if something relevant has been posted? I have. This project began when my hometown surprised residents by adding parking restriction signs on our street. The change was recorded in the city council minutes, but I hadn’t noticed them. Manually scanning the large volume of meeting minutes is time-consuming and needs to be done regularly. This application automates that work and notifies you when meeting minutes (or other monitored pages) contain items of interest.
 
-## How to get Google OAuth2 client_secret.json for Gmail and Gemini API
-This app uses the Gmail and Gemini API via Google Cloud and OAuth2 for secure email delivery and Gemini usage:
+Overview
+--------
 
-- **OAuth2 Security:** Your Google password is never seen or stored by the app. Instead, Google issues a secure, time-limited access token after you grant permission.
-- **User Consent:** You must log in and explicitly approve access to your Gmail account. No email can be sent without your consent.
-- **Google Cloud Controls:** All credentials are managed in Google Cloud Console, which provides strong security and access controls.
-- **Token Storage:** Access tokens are stored securely and can be revoked by you at any time in your Google account settings.
-- **API Scopes:** The app only requests the minimum required scope (`Send email on your behalf` and `Use Gemini models with your personal quota`), limiting what it can do with your account.
-- **Token Refresh & Longevity:**
-	- Access tokens issued by Google are short-lived (typically 1 hour).
-	- The app uses the official Google.Apis.Auth library, which automatically refreshes access tokens using a stored refresh token. No manual action is needed for normal operation.
-	- As long as the refresh token is valid and present (stored securely in DB or filesystem), the app can maintain long-term access without user intervention.
-	- If the refresh token is revoked or lost, you will need to re-consent (see Token Storage Behavior below).
-	- If you change API scopes, you must re-consent and delete the old token (see instructions below).
+AiWebSiteWatchdog periodically scans configured websites for matches against user-defined interests and notifies users when relevant changes are detected. It uses Hangfire for scheduling, EF Core + SQLite for persistence, the Google Gemini generative API for content extraction/analysis, and Gmail API for notifications.
 
-This means only authorized users can send email, credentials are never exposed, and Google’s infrastructure protects both authentication and email delivery.
+Security note
+-------------
 
----
+This service is intended to run on a private, trusted network (intranet, internal cloud VNet). Do not expose the application directly to the public internet without appropriate controls (authenticated reverse proxy, VPN, IP allowlist, WAF). See the Security & Secrets section for guidance.
 
-## How to get Google OAuth2 client_secret.json for Gmail and Gemini API
+Prerequisites
+-------------
+
+- .NET 9 SDK
+- A Google Cloud project with Gmail & Generative Language (Gemini) APIs enabled
+- (Optional) Docker for containerized runs
+
+Key .NET conventions & technologies
+----------------------------------
+
+- Platform: .NET 9, minimal API (WebApplication) in `AiWebSiteWatchDog.API/Program.cs`
+- DI: built-in Microsoft DI; register services with appropriate lifetimes
+- Configuration: `appsettings.json` + environment variables (double-underscore mapping)
+- Persistence: EF Core with SQLite; migrations included; design-time `AppDbContextFactory` uses env var for connection string
+- Scheduling: Hangfire with SQLite storage; recurring jobs use `RecurringJob.AddOrUpdate`
+- HTTP calls: typed `HttpClient` for `IGeminiApiClient`
+- Logging: Serilog (configured via appsettings)
+- Central package version management via Directory.Packages.props (PackageVersion entries).
+- Clean architecture
+
+Where to look in the codebase
+----------------------------
+
+- Startup & DI: `AiWebSiteWatchDog.API/Program.cs`
+- Endpoints: `AiWebSiteWatchDog.API/Endpoints.cs`
+- Background job runner: `AiWebSiteWatchDog.API/Jobs/WatchTaskJobRunner.cs`
+- Gemini client: `AiWebSiteWatchDog.Infrastructure/Gemini/GeminiApiClient.cs`
+- Email sending: `AiWebSiteWatchDog.Infrastructure/Email/EmailSender.cs`
+- Google auth/token handling: `AiWebSiteWatchDog.Infrastructure/Auth/GoogleCredentialProvider.cs`
+- Persistence: `AiWebSiteWatchDog.Infrastructure/Persistence/` and domain entities under `AiWebSiteWatchDog.Domain/Entities/`
+
+Getting Google OAuth2 credentials
+---------------------------------
+
 This app uses the Gmail and Gemini API via Google Cloud and OAuth2 for secure email delivery and Gemini usage:
 
 - **OAuth2 Security:** Your Google password is never seen or stored by the app. Instead, Google issues a secure, time-limited access token after you grant permission.
@@ -55,99 +80,69 @@ To send email using the Gmail API, you need a Google OAuth2 client_secret.json f
 - Alternatively, you can publish the app to make it available to all users in your organization or publicly.
 - The app requests both Gmail send and Gemini (Generative Language) scopes using a single combined consent; if scopes change later you must re-consent (delete stored token row / token files).
 
----
+Configuration (appsettings.json & environment variables)
+------------------------------------------------------
 
-## Environment Variables
+The application reads configuration from `appsettings.json`. Environment variables override values from `appsettings.json`. Use double-underscore to set hierarchical keys as env vars (for example `ConnectionStrings__DefaultConnection` maps to `ConnectionStrings:DefaultConnection`).
 
-The application uses environment variables for secrets and optional storage behavior. These should be set before starting the API.
+Important configuration keys
 
-| Variable | Required | Purpose | Notes |
-|----------|----------|---------|-------|
-| `GOOGLE_CLIENT_SECRET_JSON` | Yes | Raw contents of your Google OAuth client `client_secret.json` | Do NOT commit. Multi-line JSON accepted. |
-| `USE_DB_TOKEN_STORE` | No (default `false`) | When `true`, persists encrypted OAuth tokens in the database (`GoogleOAuthTokens` table) | Use for multi-instance or container deployments. |
-| `GOOGLE_TOKENS_ENCRYPTION_KEY` | Yes if DB store enabled | Base64 encoded AES key (16/24/32 bytes) used to encrypt token JSON at rest | Generate once and rotate carefully. |
-| `GOOGLE_TOKENS_PATH` | Optional (filesystem mode only) | Override base directory for local token cache when not using DB | Useful in container mounts / dev sandbox. |
+| Key (appsettings path) | Example env var | Purpose |
+|---|---|---|
+| `ConnectionStrings:DefaultConnection` | `ConnectionStrings__DefaultConnection` | SQLite/DB connection for EF Core |
+| `ConnectionStrings:HangfireConnection` | `ConnectionStrings__HangfireConnection` | Hangfire storage connection |
+| `Hangfire:WorkerCount` | `Hangfire__WorkerCount` | Number of Hangfire workers |
+| `Google:UseDbTokenStore` | `Google__UseDbTokenStore` | Persist OAuth tokens to DB when true |
+| `Google:TokensPath` | `Google__TokensPath` | Filesystem token cache base path (if not using DB) |
 
-### Generating an Encryption Key
-### Generate a Key via the Application (no openssl needed)
-You can have the app produce a secure 32-byte (AES-256) Base64 key and exit:
+Secrets (do NOT commit)
+
+- `GOOGLE_CLIENT_SECRET_JSON`: raw client_secret.json contents (required)
+- `GOOGLE_TOKENS_ENCRYPTION_KEY`: Base64 AES key used to encrypt DB token rows (required if DB store is enabled)
+
+Generating an encryption key
+---------------------------
+
+The app can generate a secure AES-256 key and exit:
+
 ```pwsh
 dotnet run --project .\AiWebSiteWatchDog.API -- --generate-encryption-key
 ```
-Output example:
-```
-Base64 AES-256 key (store in GOOGLE_TOKENS_ENCRYPTION_KEY):
-q2m4YyI2M0qXq3F4v6Q8Yd9vKk1Jd3tXgE2p9lqV2mI=
-Length (bytes): 32  | IMPORTANT: keep this stable across deployments.
-```
-Copy the printed value into your secret manager or set it directly as an environment variable.
 
-#### Quick (Windows) set and run
+The command prints a Base64 string you should store in a secret manager and set as `GOOGLE_TOKENS_ENCRYPTION_KEY`.
+
+Running locally (development)
+-----------------------------
+
+Set the required env vars and run:
+
 ```pwsh
-$key = (dotnet run --project .\AiWebSiteWatchDog.API -- --generate-encryption-key | Select-Object -Skip 1 -First 1).Trim()
-$env:GOOGLE_TOKENS_ENCRYPTION_KEY = $key
+$env:GOOGLE_CLIENT_SECRET_JSON = Get-Content -Raw .\client_secret.json
+$env:ConnectionStrings__DefaultConnection = 'Data Source=AiWebSitewatchdog.db'
 dotnet run --project .\AiWebSiteWatchDog.API
 ```
 
-#### Generate inside Docker then run API with the key
-```powershell
-# 1. Generate key (prints 3 lines)
-$out = docker run --rm aiwatchdog:latest --generate-encryption-key
-$key = ($out -split "`n")[1].Trim()
+Docker (recommended: inject secrets at runtime)
+----------------------------------------------
 
-# 2. Run container with key as env var
-docker run --rm -p 5050:8080 `
-	-e GOOGLE_CLIENT_SECRET_JSON="$(Get-Content -Raw .\client_secret.json)" `
-	-e USE_DB_TOKEN_STORE=true `
-	-e GOOGLE_TOKENS_ENCRYPTION_KEY=$key `
-	aiwatchdog:latest
-```
+Example runtime invocation (PowerShell):
 
-
-### Local Development (PowerShell)
-```pwsh
-$env:GOOGLE_CLIENT_SECRET_JSON = (Get-Content -Raw .\client_secret.json)
-$env:USE_DB_TOKEN_STORE = 'true'            # optional
-$env:GOOGLE_TOKENS_ENCRYPTION_KEY = 'Base64KeyHere'  # required if USE_DB_TOKEN_STORE=true
-dotnet run --project .\AiWebSiteWatchDog.API
-```
-
-### Docker Run Example (PowerShell)
 ```pwsh
 docker run --rm -p 5050:8080 `
-	-e GOOGLE_CLIENT_SECRET_JSON="$(Get-Content -Raw .\client_secret.json)" `
-	-e USE_DB_TOKEN_STORE=true `
-	-e GOOGLE_TOKENS_ENCRYPTION_KEY=Base64KeyHere `
-	your-image:latest
-	-e USE_DB_TOKEN_STORE=true \
-	-e GOOGLE_TOKENS_ENCRYPTION_KEY=Base64KeyHere \
+	-e GOOGLE_CLIENT_SECRET_JSON="$($env:GOOGLE_CLIENT_SECRET_JSON)" `
+	-e ConnectionStrings__DefaultConnection='Data Source=/data/aiwatchdog.db' `
 	your-image:latest
 ```
 
-### Docker Compose (`docker-compose.yml` snippet)
-```yaml
-services:
-	aiwatchdog:
-		image: your-image:latest
-		ports:
-			- "5050:8080"
-		environment:
-			GOOGLE_CLIENT_SECRET_JSON: ${GOOGLE_CLIENT_SECRET_JSON}
-			USE_DB_TOKEN_STORE: "true"
-			GOOGLE_TOKENS_ENCRYPTION_KEY: ${GOOGLE_TOKENS_ENCRYPTION_KEY}
-```
-Then in a `.env` file (not committed):
-```
-GOOGLE_CLIENT_SECRET_JSON={"installed":{...}}
-GOOGLE_TOKENS_ENCRYPTION_KEY=Base64KeyHere
-```
+Token storage behavior
+----------------------
 
-### Token Storage Behavior
-| Mode | Trigger | Location | Encryption |
-|------|---------|----------|------------|
-| Filesystem | `USE_DB_TOKEN_STORE` unset / false | Hashed directory under OS config path | OS permissions only |
-| DB Encrypted | `USE_DB_TOKEN_STORE=true` | Table `GoogleOAuthTokens` | AES-GCM using `GOOGLE_TOKENS_ENCRYPTION_KEY` |
+| Mode | Trigger | Location | Notes |
+|---|---|---|---|
+| Filesystem | `Google:UseDbTokenStore` = false | Hashed folder under OS profile/config path | Simpler for single-instance dev runs |
+| Database (encrypted) | `Google:UseDbTokenStore` = true | `GoogleOAuthTokens` table | Requires `GOOGLE_TOKENS_ENCRYPTION_KEY` to decrypt; recommended for multi-instance deployments |
 
-To force re-consent (e.g., after adding a new scope) delete the row in `GoogleOAuthTokens` (DB mode) or remove the hashed token folder (filesystem mode) and trigger an email/gemini action again.
+Logging
+-------
 
----
+Serilog is configured in `appsettings.json`. The file sink is set to daily roll and retention; adjust `Serilog` section in `appsettings.json` or via env vars to change behavior.
