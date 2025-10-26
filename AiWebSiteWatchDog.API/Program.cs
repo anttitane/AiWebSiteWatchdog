@@ -9,9 +9,8 @@ using AiWebSiteWatchDog.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using AiWebSiteWatchDog.API.Jobs;
 
-Log.Logger = new LoggerConfiguration()
-    .WriteTo.File("logs/AiWebSiteWatchDog.log", rollingInterval: RollingInterval.Day)
-    .CreateLogger();
+// Serilog will be configured from appsettings.json via UseSerilog below so
+// logging configuration can be adjusted without recompiling.
 
 // Simple CLI utility mode: generate encryption key and exit
 if (args.Length == 1 && string.Equals(args[0], "--generate-encryption-key", StringComparison.OrdinalIgnoreCase))
@@ -24,8 +23,14 @@ if (args.Length == 1 && string.Equals(args[0], "--generate-encryption-key", Stri
     return; // exit process
 }
 
-var builder = WebApplication.CreateBuilder(args);
-builder.Host.UseSerilog();
+var builder = WebApplication.CreateBuilder(new WebApplicationOptions { Args = args });
+// Replace the default logging with Serilog configured from appsettings.json
+builder.Host.UseSerilog((ctx, services, loggerConfig) =>
+{
+    // Ensure Serilog reads from the same configuration source the app uses
+    loggerConfig.ReadFrom.Configuration(ctx.Configuration);
+    loggerConfig.Enrich.FromLogContext();
+});
 
 // Add Hangfire services (after builder declaration)
 builder.Services.AddHangfire(config =>
