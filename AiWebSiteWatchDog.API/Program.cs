@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
+using Microsoft.Extensions.Configuration;
 using Hangfire.SQLite;
 using AiWebSiteWatchDog.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -33,16 +34,20 @@ builder.Host.UseSerilog((ctx, services, loggerConfig) =>
 });
 
 // Add Hangfire services (after builder declaration)
+// Configure Hangfire using connection string from configuration
 builder.Services.AddHangfire(config =>
 {
     config.UseSimpleAssemblyNameTypeSerializer();
     config.UseRecommendedSerializerSettings();
-    config.UseSQLiteStorage("Data Source=AiWebSiteWatchdog.db;Cache=Shared;Mode=ReadWriteCreate;", new Hangfire.SQLite.SQLiteStorageOptions());
+    var hangfireConn = builder.Configuration.GetConnectionString("HangfireConnection")
+                      ?? builder.Configuration.GetConnectionString("DefaultConnection")
+                      ?? "Data Source=AiWebSiteWatchdog.db;Cache=Shared;Mode=ReadWriteCreate;";
+    config.UseSQLiteStorage(hangfireConn, new Hangfire.SQLite.SQLiteStorageOptions());
 });
 builder.Services.AddHangfireServer(options =>
 {
     // Reduce parallelism to minimize duplicate concurrent executions
-    options.WorkerCount = 1;
+    options.WorkerCount = builder.Configuration.GetValue<int?>("Hangfire:WorkerCount") ?? 1;
 });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -72,8 +77,10 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 // Register EF Core DbContext
-builder.Services.AddDbContext<AiWebSiteWatchDog.Infrastructure.Persistence.AppDbContext>(options =>
-    options.UseSqlite("Data Source=AiWebSiteWatchdog.db"));
+    // Register EF Core DbContext using connection string from configuration
+    var defaultConn = builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=AiWebSiteWatchdog.db";
+    builder.Services.AddDbContext<AiWebSiteWatchDog.Infrastructure.Persistence.AppDbContext>(options =>
+        options.UseSqlite(defaultConn));
 
 // Register infrastructure implementations
 builder.Services.AddScoped<ISettingsRepository, AiWebSiteWatchDog.Infrastructure.Persistence.SQLiteSettingsRepository>();
