@@ -76,11 +76,10 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-// Register EF Core DbContext
-    // Register EF Core DbContext using connection string from configuration
-    var defaultConn = builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=AiWebSiteWatchdog.db";
-    builder.Services.AddDbContext<AiWebSiteWatchDog.Infrastructure.Persistence.AppDbContext>(options =>
-        options.UseSqlite(defaultConn));
+// Register EF Core DbContext using connection string from configuration
+var defaultConn = builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=AiWebSiteWatchdog.db";
+builder.Services.AddDbContext<AiWebSiteWatchDog.Infrastructure.Persistence.AppDbContext>(options =>
+    options.UseSqlite(defaultConn));
 
 // Register infrastructure implementations
 builder.Services.AddScoped<ISettingsRepository, AiWebSiteWatchDog.Infrastructure.Persistence.SQLiteSettingsRepository>();
