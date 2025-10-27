@@ -6,6 +6,7 @@ namespace AiWebSiteWatchDog.Domain.DTOs
         string UserEmail,
         string SenderEmail,
         string SenderName,
+        string GeminiApiUrl,
         IReadOnlyCollection<WatchTaskSummaryDto> WatchTasks);
 
     public record WatchTaskSummaryDto(

@@ -20,11 +20,22 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
                 if (settings == null)
                 {
                     Log.Warning("No settings found in database, returning default settings.");
-                    return new UserSettings(
+                    var defaults = new UserSettings(
                         userEmail: string.Empty,
                         senderEmail: string.Empty,
                         senderName: string.Empty
                     );
+                    // Ensure default Gemini URL is populated
+                    if (string.IsNullOrWhiteSpace(defaults.GeminiApiUrl))
+                    {
+                        defaults.GeminiApiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+                    }
+                    return defaults;
+                }
+                // Backfill default if the column exists but value is empty (older rows)
+                if (string.IsNullOrWhiteSpace(settings.GeminiApiUrl))
+                {
+                    settings.GeminiApiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
                 }
                 Log.Information("Settings loaded successfully from database.");
                 return settings;
@@ -63,6 +74,9 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
                     }
                     existing.SenderEmail = settings.SenderEmail;
                     existing.SenderName = settings.SenderName;
+                    existing.GeminiApiUrl = string.IsNullOrWhiteSpace(settings.GeminiApiUrl)
+                        ? "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+                        : settings.GeminiApiUrl;
                 }
                 await _dbContext.SaveChangesAsync();
                 Log.Information("Settings saved successfully to database.");

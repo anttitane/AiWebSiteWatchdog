@@ -12,7 +12,7 @@ namespace AiWebSiteWatchDog.Domain.DTOs
             new(task.Id, task.Title, task.Url, task.Schedule, task.Enabled);
 
         public static UserSettingsDto ToDto(this UserSettings settings) =>
-            new(settings.UserEmail, settings.SenderEmail, settings.SenderName, settings.WatchTasks.Select(t => t.ToSummaryDto()).ToList());
+            new(settings.UserEmail, settings.SenderEmail, settings.SenderName, settings.GeminiApiUrl, settings.WatchTasks.Select(t => t.ToSummaryDto()).ToList());
 
         public static NotificationDto ToDto(this Notification notification) =>
             new(notification.Id, notification.Subject, notification.Message, notification.SentAt);

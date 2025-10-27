@@ -23,8 +23,10 @@ namespace AiWebSiteWatchDog.Infrastructure.Gemini
             doc.LoadHtml(html);
             var text = HtmlAgilityPack.HtmlEntity.DeEntitize(doc.DocumentNode.InnerText);
 
-		    // 3. Form prompt for Gemini
-            var geminiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+            // 3. Resolve Gemini API endpoint (configurable via UserSettings, fallback to default)
+            const string DefaultGeminiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+            var settingsForUrl = await _settingsService.GetSettingsAsync();
+            var geminiUrl = string.IsNullOrWhiteSpace(settingsForUrl?.GeminiApiUrl) ? DefaultGeminiUrl : settingsForUrl.GeminiApiUrl;
 
             var geminiBody = new
             {
@@ -55,7 +57,7 @@ namespace AiWebSiteWatchDog.Infrastructure.Gemini
                 request.Headers.Add("Authorization", $"Bearer {accessToken}");
                 request.Headers.Add("Accept", "application/json");
 
-                Log.Information("Calling Gemini API with prompt '{Prompt}'", prompt);
+                Log.Information("Calling Gemini API at {GeminiUrl} with prompt '{Prompt}'", geminiUrl, prompt);
                 var response = await _http.SendAsync(request);
                 response.EnsureSuccessStatusCode();
                 var json = await response.Content.ReadAsStringAsync();
