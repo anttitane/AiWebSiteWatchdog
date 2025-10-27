@@ -38,6 +38,7 @@ ScaffoldingReadMe.txt
 
 # Others
 ~$*
+*.bu
 
 # SQLite database files
 *.db

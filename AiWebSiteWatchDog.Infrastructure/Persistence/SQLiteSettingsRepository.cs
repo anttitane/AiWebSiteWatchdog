@@ -4,15 +4,24 @@ using AiWebSiteWatchDog.Domain.Interfaces;
 using Serilog;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
+using Microsoft.Extensions.Caching.Memory;
+using AiWebSiteWatchDog.Domain.Constants;
 
 namespace AiWebSiteWatchDog.Infrastructure.Persistence
 {
-    public class SQLiteSettingsRepository(AppDbContext _dbContext) : ISettingsRepository
+    public class SQLiteSettingsRepository(AppDbContext _dbContext, IMemoryCache cache) : ISettingsRepository
     {
+        private readonly IMemoryCache _cache = cache;
+        private const string CacheKey = "UserSettings:Singleton";
         public async Task<UserSettings> LoadAsync()
         {
             try
             {
+                if (_cache.TryGetValue<UserSettings>(CacheKey, out var cached) && cached is not null)
+                {
+                    return cached;
+                }
+
                 var settings = await _dbContext.UserSettings
                     .Include(u => u.WatchTasks)
                     .OrderBy(u => u.UserEmail)
@@ -28,16 +37,18 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
                     // Ensure default Gemini URL is populated
                     if (string.IsNullOrWhiteSpace(defaults.GeminiApiUrl))
                     {
-                        defaults.GeminiApiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+                        defaults.GeminiApiUrl = GeminiDefaults.ApiUrl;
                     }
+                    _cache.Set(CacheKey, defaults);
                     return defaults;
                 }
                 // Backfill default if the column exists but value is empty (older rows)
                 if (string.IsNullOrWhiteSpace(settings.GeminiApiUrl))
                 {
-                    settings.GeminiApiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+                    settings.GeminiApiUrl = GeminiDefaults.ApiUrl;
                 }
                 Log.Information("Settings loaded successfully from database.");
+                _cache.Set(CacheKey, settings);
                 return settings;
             }
             catch (System.Exception ex)
@@ -75,10 +86,12 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
                     existing.SenderEmail = settings.SenderEmail;
                     existing.SenderName = settings.SenderName;
                     existing.GeminiApiUrl = string.IsNullOrWhiteSpace(settings.GeminiApiUrl)
-                        ? "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+                        ? GeminiDefaults.ApiUrl
                         : settings.GeminiApiUrl;
                 }
                 await _dbContext.SaveChangesAsync();
+                // Update cache after save
+                _cache.Set(CacheKey, existing ?? settings);
                 Log.Information("Settings saved successfully to database.");
             }
             catch (System.Exception ex)
