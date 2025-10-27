@@ -9,11 +9,11 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/AiWebSiteWatchDog.API/bin/Debug/net8.0/AiWebSiteWatchDog.API.dll",
+            "program": "${workspaceFolder}/AiWebSiteWatchDog.API/bin/Debug/net9.0/AiWebSiteWatchDog.API.dll",
             "args": ["--urls", "http://localhost:5050"],
             "cwd": "${workspaceFolder}/AiWebSiteWatchDog.API",
             "stopAtEntry": false,
-            "console": "internalConsole"
+            "console": "integratedTerminal"
         }
     ]
 }

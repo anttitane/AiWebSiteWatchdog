@@ -15,7 +15,7 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "9.0.9");
+            modelBuilder.HasAnnotation("ProductVersion", "9.0.10");
 
             modelBuilder.Entity("AiWebSiteWatchDog.Domain.Entities.Notification", b =>
                 {
@@ -42,6 +42,10 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
             modelBuilder.Entity("AiWebSiteWatchDog.Domain.Entities.UserSettings", b =>
                 {
                     b.Property<string>("UserEmail")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("GeminiApiUrl")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("SenderEmail")

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Serilog;
 using AiWebSiteWatchDog.Domain.Interfaces;
 using AiWebSiteWatchDog.Infrastructure.Auth;
+using AiWebSiteWatchDog.Domain.Constants;
 
 namespace AiWebSiteWatchDog.Infrastructure.Gemini
 {
@@ -23,8 +24,19 @@ namespace AiWebSiteWatchDog.Infrastructure.Gemini
             doc.LoadHtml(html);
             var text = HtmlAgilityPack.HtmlEntity.DeEntitize(doc.DocumentNode.InnerText);
 
-		    // 3. Form prompt for Gemini
-            var geminiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+            // 3. Resolve Gemini API endpoint and sender settings with a single read
+            var settings = await _settingsService.GetSettingsAsync();
+            if (settings is null)
+            {
+                throw new InvalidOperationException("Application settings not available.");
+            }
+            var s = settings!; // null-guarded above
+            var geminiUrl = string.IsNullOrWhiteSpace(s.GeminiApiUrl) ? GeminiDefaults.ApiUrl : s.GeminiApiUrl;
+
+            // Validate sender email now to avoid re-fetching settings later
+            var senderEmail = string.IsNullOrWhiteSpace(s.SenderEmail)
+                ? throw new InvalidOperationException("SenderEmail not configured in database.")
+                : s.SenderEmail;
 
             var geminiBody = new
             {
@@ -41,10 +53,6 @@ namespace AiWebSiteWatchDog.Infrastructure.Gemini
             // 4. Call Gemini API
             try
             {
-                var settings = await _settingsService.GetSettingsAsync();
-                var senderEmail = string.IsNullOrWhiteSpace(settings.SenderEmail)
-                    ? throw new InvalidOperationException("SenderEmail not configured in database.")
-                    : settings.SenderEmail;
                 var credential = await _credentialProvider.GetGmailAndGeminiCredentialAsync(senderEmail);
                 var accessToken = await credential.GetAccessTokenForRequestAsync();
 
@@ -55,7 +63,7 @@ namespace AiWebSiteWatchDog.Infrastructure.Gemini
                 request.Headers.Add("Authorization", $"Bearer {accessToken}");
                 request.Headers.Add("Accept", "application/json");
 
-                Log.Information("Calling Gemini API with prompt '{Prompt}'", prompt);
+                Log.Information("Calling Gemini API at {GeminiUrl} with prompt '{Prompt}'", geminiUrl, prompt);
                 var response = await _http.SendAsync(request);
                 response.EnsureSuccessStatusCode();
                 var json = await response.Content.ReadAsStringAsync();

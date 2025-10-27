@@ -47,7 +47,8 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
                 {
                     UserEmail = table.Column<string>(type: "TEXT", nullable: false),
                     SenderEmail = table.Column<string>(type: "TEXT", nullable: false),
-                    SenderName = table.Column<string>(type: "TEXT", nullable: false)
+                    SenderName = table.Column<string>(type: "TEXT", nullable: false),
+                    GeminiApiUrl = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {

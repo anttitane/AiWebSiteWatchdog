@@ -3,13 +3,14 @@
 	"tasks": [
 		{
 			"label": "build",
-			"command": "dotnet",
 			"type": "process",
+			"command": "dotnet",
 			"args": [
 				"build",
 				"AiWebSiteWatchDog.sln"
 			],
-			"problemMatcher": "$msCompile"
+			"problemMatcher": "$msCompile",
+			"group": "build"
 		}
 	]
 }

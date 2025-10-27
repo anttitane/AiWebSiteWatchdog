@@ -81,6 +81,9 @@ var defaultConn = builder.Configuration.GetConnectionString("DefaultConnection")
 builder.Services.AddDbContext<AiWebSiteWatchDog.Infrastructure.Persistence.AppDbContext>(options =>
     options.UseSqlite(defaultConn));
 
+// Add in-memory cache for settings caching
+builder.Services.AddMemoryCache();
+
 // Register infrastructure implementations
 builder.Services.AddScoped<ISettingsRepository, AiWebSiteWatchDog.Infrastructure.Persistence.SQLiteSettingsRepository>();
 builder.Services.AddScoped<INotificationRepository, AiWebSiteWatchDog.Infrastructure.Persistence.NotificationRepository>();
