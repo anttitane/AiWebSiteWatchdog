@@ -260,7 +260,6 @@ namespace AiWebSiteWatchDog.API
             .WithName("RunTask")
             .WithTags("Tasks")
             .WithDescription("Manually run a watch task. Optional query ?sendEmail=true to also send an email notification.")
-            .RequireRateLimiting("RunTaskPerIp")
             .RequireRateLimiting("RunTaskConcurrencyPerIp")
             .Produces<WatchTaskDto>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status404NotFound);
