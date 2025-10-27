@@ -9,6 +9,8 @@ using Hangfire.SQLite;
 using AiWebSiteWatchDog.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using AiWebSiteWatchDog.API.Jobs;
+using Microsoft.AspNetCore.HttpOverrides;
+using AiWebSiteWatchDog.API.Configuration;
 
 // Serilog will be configured from appsettings.json via UseSerilog below so
 // logging configuration can be adjusted without recompiling.
@@ -84,6 +86,9 @@ builder.Services.AddDbContext<AiWebSiteWatchDog.Infrastructure.Persistence.AppDb
 // Add in-memory cache for settings caching
 builder.Services.AddMemoryCache();
 
+// Add rate limiting from configuration
+builder.Services.AddConfiguredRateLimiting(builder.Configuration);
+
 // Register infrastructure implementations
 builder.Services.AddScoped<ISettingsRepository, AiWebSiteWatchDog.Infrastructure.Persistence.SQLiteSettingsRepository>();
 builder.Services.AddScoped<INotificationRepository, AiWebSiteWatchDog.Infrastructure.Persistence.NotificationRepository>();
@@ -100,6 +105,15 @@ builder.Services.AddScoped<IWatcherService, AiWebSiteWatchDog.Application.Servic
 builder.Services.AddScoped<WatchTaskJobRunner>();
 
 var app = builder.Build();
+
+// Honor proxy forwarded headers (to identify real client IP for rate limiting)
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
+
+// Enable rate limiting middleware
+app.UseConfiguredRateLimiting();
 
 // Enable Hangfire dashboard (for job monitoring)
 app.UseHangfireDashboard();
