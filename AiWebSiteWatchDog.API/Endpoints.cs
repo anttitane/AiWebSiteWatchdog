@@ -12,6 +12,7 @@ using AiWebSiteWatchDog.Application.Parsing;
 using Hangfire;
 using AiWebSiteWatchDog.API.Jobs;
 using Serilog;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace AiWebSiteWatchDog.API
 {
@@ -259,6 +260,7 @@ namespace AiWebSiteWatchDog.API
             .WithName("RunTask")
             .WithTags("Tasks")
             .WithDescription("Manually run a watch task. Optional query ?sendEmail=true to also send an email notification.")
+            .RequireRateLimiting("RunTaskConcurrencyPerIp")
             .Produces<WatchTaskDto>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status404NotFound);
 
@@ -358,7 +360,7 @@ namespace AiWebSiteWatchDog.API
             .Produces<NotificationDto>(StatusCodes.Status201Created);
 
             // Health/status endpoint
-            app.MapGet("/health", () => Results.Ok(new { status = "Healthy" }));
+            app.MapGet("/health", () => Results.Ok(new { status = "Healthy" })).DisableRateLimiting();
 
             // Delete all tasks
             app.MapDelete("/tasks", async ([FromServices] AiWebSiteWatchDog.Infrastructure.Persistence.WatchTaskRepository repo) =>
@@ -408,6 +410,7 @@ namespace AiWebSiteWatchDog.API
                 }
             })
             .WithDescription("Initiate Google OAuth consent for Gmail/Gemini scopes.")
+            .RequireRateLimiting("StrictPerIp")
             .WithTags("auth");
         } 
     }
