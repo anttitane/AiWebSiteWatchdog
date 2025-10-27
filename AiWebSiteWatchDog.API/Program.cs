@@ -165,6 +165,7 @@ AiWebSiteWatchDog.API.Endpoints.MapApiEndpoints(app);
 
 // Enable Swagger middleware AFTER endpoints are mapped so the OpenAPI generator
 // can pick up minimal API endpoints and produce a valid document.
+// TODO: restrict Swagger to non-production environments only!
 if (app.Environment.IsDevelopment() || app.Environment.IsStaging() || app.Environment.IsProduction())
 {
     app.UseSwagger();
