@@ -106,11 +106,8 @@ builder.Services.AddScoped<WatchTaskJobRunner>();
 
 var app = builder.Build();
 
-// Honor proxy forwarded headers (to identify real client IP for rate limiting)
-app.UseForwardedHeaders(new ForwardedHeadersOptions
-{
-    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
-});
+// Honor proxy forwarded headers, but only from configured/known proxies or networks
+app.UseConfiguredForwardedHeaders();
 
 // Enable rate limiting middleware
 app.UseConfiguredRateLimiting();
