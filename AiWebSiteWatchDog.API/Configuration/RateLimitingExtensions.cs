@@ -13,7 +13,12 @@ namespace AiWebSiteWatchDog.API.Configuration
         private static string GetClientKey(HttpContext ctx)
         {
             var ip = ctx.Connection.RemoteIpAddress?.ToString();
-            return string.IsNullOrEmpty(ip) ? "unknown" : ip;
+            if (!string.IsNullOrWhiteSpace(ip)) return ip;
+
+            // Fallback: use a per-request unique key to avoid sharing quotas across unidentified clients
+            var traceId = ctx.TraceIdentifier;
+            if (string.IsNullOrWhiteSpace(traceId)) traceId = Guid.NewGuid().ToString("N");
+            return $"unknown:{traceId}";
         }
 
         public static IServiceCollection AddConfiguredRateLimiting(this IServiceCollection services, IConfiguration configuration)
