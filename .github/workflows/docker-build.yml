@@ -135,7 +135,8 @@ jobs:
 
           echo "tags<<EOF" >> "$GITHUB_OUTPUT"
           cat "$TAGS_FILE" >> "$GITHUB_OUTPUT"
-          echo "\nEOF" >> "$GITHUB_OUTPUT"
+          echo "" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
 
       - name: Build and (optionally) push
         uses: docker/build-push-action@v6
