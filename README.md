@@ -194,7 +194,7 @@ Inspecting logs and data volumes:
 docker compose logs -f aiwebsitewatchdog
 
 # List log files persisted on the volume
-docker compose exec aiwebsitewatchdog sh -lc "ls -la /app/logs"
+docker compose exec aiwebsitewatchdog ls -la /app/logs
 
 # Copy logs to host
 docker cp aiwebsitewatchdog:/app/logs .\logs-copy
