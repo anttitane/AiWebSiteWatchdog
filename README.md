@@ -122,16 +122,82 @@ $env:ConnectionStrings__DefaultConnection = 'Data Source=AiWebSitewatchdog.db'
 dotnet run --project .\AiWebSiteWatchDog.API
 ```
 
-Docker (recommended: inject secrets at runtime)
-----------------------------------------------
+Docker (single container)
+-------------------------
 
-Example runtime invocation (PowerShell):
+If you prefer a one-off run without Compose, you can run the container directly and inject configuration via environment variables:
 
 ```pwsh
-docker run --rm -p 5050:8080 `
+# Replace ghcr.io/anttitane/aiwebsitewatchdog:latest with your image tag
+docker run --rm -p 8080:8080 `
+	-e ASPNETCORE_ENVIRONMENT=Development `
+	-e ConnectionStrings__DefaultConnection='Data Source=/data/app.db' `
+	-e ConnectionStrings__HangfireConnection='Data Source=/data/app.db;Cache=Shared;Mode=ReadWriteCreate;' `
 	-e GOOGLE_CLIENT_SECRET_JSON="$($env:GOOGLE_CLIENT_SECRET_JSON)" `
-	-e ConnectionStrings__DefaultConnection='Data Source=/data/aiwatchdog.db' `
-	your-image:latest
+	-v app_data:/data `
+	-v app_logs:/app/logs `
+	ghcr.io/anttitane/aiwebsitewatchdog:latest
+```
+
+Notes:
+- The container listens on port 8080; adjust the left side of -p accordingly.
+- We mount two named volumes: app_data for the SQLite file at /data/app.db and app_logs for Serilog file output at /app/logs.
+- GOOGLE_CLIENT_SECRET_JSON should contain the content of your client_secret.json (do not bake it into the image).
+
+Docker Compose (recommended)
+----------------------------
+
+This repo includes a `docker-compose.yml` that wires sensible defaults:
+- Maps port 8080 → 8080
+- Persists data and logs to named volumes (`app_data`, `app_logs`)
+- Sets both EF Core and Hangfire to use the same SQLite DB at `/data/app.db`
+- Enables console logging (visible via `docker compose logs`)
+
+Basic usage:
+
+```pwsh
+# Build and start in the background
+docker compose up -d --build
+
+# Stream logs from the aiwebsitewatchdog container
+docker compose logs -f aiwebsitewatchdog
+
+# Stop and remove containers
+docker compose down
+```
+
+Environment configuration:
+- Override configuration via environment variables in `docker-compose.yml` (mapping syntax)
+	- `ConnectionStrings__DefaultConnection: Data Source=/data/app.db`
+	- `ConnectionStrings__HangfireConnection: Data Source=/data/app.db;Cache=Shared;Mode=ReadWriteCreate;`
+	- `ASPNETCORE_ENVIRONMENT: Development` (so Swagger UI is available at `/swagger`)
+- Provide secrets at runtime (example for PowerShell):
+
+```pwsh
+$env:GOOGLE_CLIENT_SECRET_JSON = Get-Content -Raw .\client_secret.json
+# Optionally, set an encryption key if using DB token store
+# $env:GOOGLE_TOKENS_ENCRYPTION_KEY = "<Base64-AES-256>"
+
+# Then start compose (env vars are inherited by Docker on Windows)
+docker compose up -d --build
+```
+
+Endpoints to try:
+- Swagger UI: http://localhost:8080/swagger
+- Health: http://localhost:8080/health
+- Hangfire Dashboard: http://localhost:8080/hangfire
+
+Inspecting logs and data volumes:
+
+```pwsh
+# Tail app logs (console)
+docker compose logs -f aiwebsitewatchdog
+
+# List log files persisted on the volume
+docker compose exec aiwebsitewatchdog sh -lc "ls -la /app/logs"
+
+# Copy logs to host
+docker cp aiwebsitewatchdog:/app/logs .\logs-copy
 ```
 
 Token storage behavior
