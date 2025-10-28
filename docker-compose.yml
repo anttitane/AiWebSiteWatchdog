@@ -4,6 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
     image: aiwebsitewatchdog:local
+    container_name: aiwebsitewatchdog
     ports:
       - "8080:8080"
     environment:
