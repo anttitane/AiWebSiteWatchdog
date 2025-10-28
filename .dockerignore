@@ -1,0 +1,27 @@
+# VCS and editor
+.git
+.gitignore
+.gitattributes
+.vs/
+.vscode/
+
+# Build outputs
+bin/
+obj/
+**/bin/
+**/obj/
+
+# OS junk
+**/.DS_Store
+
+# Logs and data
+logs/
+**/*.log
+google_tokens/
+
+# Local secrets (mount at runtime instead)
+client_secret.json
+
+# Docker-related
+Dockerfile*
+docker-compose*.yml

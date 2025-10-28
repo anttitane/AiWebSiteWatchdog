@@ -1,0 +1,23 @@
+services:
+  aiwebsitewatchdog:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: aiwebsitewatchdog:local
+    container_name: aiwebsitewatchdog
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__DefaultConnection: Data Source=/data/app.db
+      ConnectionStrings__HangfireConnection: Data Source=/data/app.db;Cache=Shared;Mode=ReadWriteCreate;
+    volumes:
+      # Persist application data (SQLite DB at /data/app.db)
+      - app_data:/data
+      # Persist logs written to /app/logs by Serilog
+      - app_logs:/app/logs
+    restart: unless-stopped
+
+volumes:
+  app_data:
+  app_logs:
