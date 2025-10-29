@@ -78,10 +78,50 @@ namespace AiWebSiteWatchDog.Infrastructure.Auth
 
         public async Task<UserCredential> GetGmailAndGeminiCredentialAsync(string senderEmail, CancellationToken ct = default)
         {
-            // Allow providing client secret via environment variable OR IConfiguration (user-secrets/appsettings)
-            var clientSecretJson = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET_JSON") ?? _config["GOOGLE_CLIENT_SECRET_JSON"];
+            // Resolve Google OAuth client secret from multiple sources (priority order):
+            // 1) GOOGLE_CLIENT_SECRET_JSON_FILE -> read file contents (supports Docker secrets/bind mounts)
+            // 2) GOOGLE_CLIENT_SECRET_JSON_B64 -> Base64-encoded JSON (avoids quoting issues)
+            // 3) GOOGLE_CLIENT_SECRET_JSON     -> raw JSON string
+            // Also fall back to IConfiguration for all three keys when env var not set.
+
+            string? clientSecretJson = null;
+
+            // 1) File path
+            var secretFile = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET_JSON_FILE")
+                               ?? _config["GOOGLE_CLIENT_SECRET_JSON_FILE"];
+            if (!string.IsNullOrWhiteSpace(secretFile) && File.Exists(secretFile))
+            {
+                clientSecretJson = File.ReadAllText(secretFile);
+            }
+
+            // 2) Base64
             if (string.IsNullOrWhiteSpace(clientSecretJson))
-                throw new InvalidOperationException("GOOGLE_CLIENT_SECRET_JSON environment variable or configuration value is required.");
+            {
+                var secretB64 = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET_JSON_B64")
+                                ?? _config["GOOGLE_CLIENT_SECRET_JSON_B64"];
+                if (!string.IsNullOrWhiteSpace(secretB64))
+                {
+                    try
+                    {
+                        var data = Convert.FromBase64String(secretB64.Trim());
+                        clientSecretJson = System.Text.Encoding.UTF8.GetString(data);
+                    }
+                    catch (FormatException)
+                    {
+                        throw new InvalidOperationException("GOOGLE_CLIENT_SECRET_JSON_B64 must be valid Base64 of the client_secret.json contents");
+                    }
+                }
+            }
+
+            // 3) Raw JSON
+            if (string.IsNullOrWhiteSpace(clientSecretJson))
+            {
+                clientSecretJson = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET_JSON")
+                                   ?? _config["GOOGLE_CLIENT_SECRET_JSON"];
+            }
+
+            if (string.IsNullOrWhiteSpace(clientSecretJson))
+                throw new InvalidOperationException("Client secret is required. Provide GOOGLE_CLIENT_SECRET_JSON, or GOOGLE_CLIENT_SECRET_JSON_FILE, or GOOGLE_CLIENT_SECRET_JSON_B64.");
 
             try
             {
