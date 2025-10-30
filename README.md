@@ -125,7 +125,7 @@ Once running:
 - Hangfire Dashboard: http://localhost:8080/hangfire
 
 Configuring:
-- Authenticate to Google using endpoint `GET /auth` by accessing http://yourIpAddress:8080/auth and give consent to scopes (Gmail send + Gemini). You need to do this only once.
+- Authenticate to Google using endpoint `GET /auth` by opening http://localhost:8080/auth on your server using a web browser (this must be done on a server that has a graphical desktop) and give consent to scopes (Gmail send + Gemini). You need to do this only once. Note that it's not possible to complete the consent flow from another PC (than your server) on your local network. 
 - Setup settings `PUT /settings`
 - Create a watch task `POST /tasks`
 
