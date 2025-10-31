@@ -93,7 +93,7 @@ docker run -d --name aiwebsitewatchdog -p 8080:8080 `
 Ubuntu Linux (bash):
 
 ```bash
-# Copy client secret JSON file to folder of your choise
+# Copy client secret JSON file to folder of your choice
 
 # Generate an encryption key (one-time) using the image
 docker run --rm ghcr.io/anttitane/aiwebsitewatchdog:latest --generate-encryption-key
