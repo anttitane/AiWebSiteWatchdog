@@ -170,13 +170,13 @@ namespace AiWebSiteWatchDog.Infrastructure.Auth
                 ? new DbEncryptedDataStore(_dbContext, _encryptionKey!)
                 : CreateFileStore(senderEmail);
 
-            var flow = new GoogleAuthorizationCodeFlow(new GoogleAuthorizationCodeFlow.Initializer
+            using var flow = new GoogleAuthorizationCodeFlow(new GoogleAuthorizationCodeFlow.Initializer
             {
                 ClientSecrets = secrets,
                 Scopes = Scopes,
                 DataStore = dataStore
             });
-
+            
             var url = flow.CreateAuthorizationCodeRequest(redirectUri);
             if (!string.IsNullOrWhiteSpace(state)) url.State = state;
             var built = url.Build().ToString();
@@ -200,7 +200,7 @@ namespace AiWebSiteWatchDog.Infrastructure.Auth
                 ? new DbEncryptedDataStore(_dbContext, _encryptionKey!)
                 : CreateFileStore(senderEmail);
 
-            var flow = new GoogleAuthorizationCodeFlow(new GoogleAuthorizationCodeFlow.Initializer
+            using var flow = new GoogleAuthorizationCodeFlow(new GoogleAuthorizationCodeFlow.Initializer
             {
                 ClientSecrets = secrets,
                 Scopes = Scopes,
