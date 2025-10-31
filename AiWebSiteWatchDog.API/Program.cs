@@ -109,11 +109,14 @@ var app = builder.Build();
 // Honor proxy forwarded headers, but only from configured/known proxies or networks
 app.UseConfiguredForwardedHeaders();
 
+// In development, expose Hangfire Dashboard (before rate limiting to avoid throttling UI polling)
+if (app.Environment.IsDevelopment())
+{
+    app.UseHangfireDashboard("/hangfire");
+}
+
 // Enable rate limiting middleware
 app.UseConfiguredRateLimiting();
-
-// Enable Hangfire dashboard (for job monitoring)
-app.UseHangfireDashboard();
 
 // Ensure database is migrated and tables are created
 AiWebSiteWatchDog.Infrastructure.Persistence.DbInitializer.EnsureMigrated(app.Services);
