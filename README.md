@@ -108,7 +108,7 @@ docker run -d --name aiwebsitewatchdog -p 8080:8080 \
 	-e ConnectionStrings__HangfireConnection='Data Source=/data/app.db;Cache=Shared;Mode=ReadWriteCreate;' \
 	-e USE_DB_TOKEN_STORE=true \
 	-e GOOGLE_TOKENS_ENCRYPTION_KEY="$GOOGLE_TOKENS_ENCRYPTION_KEY" \
-	-e GOOGLE_CLIENT_SECRET_JSON_FILE="/home/username/aiwebsitewatchdog/client_secret.json"
+	-e GOOGLE_CLIENT_SECRET_JSON_FILE="/home/username/aiwebsitewatchdog/client_secret.json" \
 	-v app_data:/data \
 	-v app_logs:/app/logs \
 	ghcr.io/anttitane/aiwebsitewatchdog:latest
