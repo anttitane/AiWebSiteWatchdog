@@ -104,17 +104,32 @@ export GOOGLE_TOKENS_ENCRYPTION_KEY="<Base64-AES-256>"
 # Run the container (example)
 docker run -d --name aiwebsitewatchdog -p 8080:8080 \
 	-e ASPNETCORE_ENVIRONMENT=Development \
+	-e TZ="Europe/Helsinki" \
 	-e ConnectionStrings__DefaultConnection='Data Source=/data/app.db' \
 	-e ConnectionStrings__HangfireConnection='Data Source=/data/app.db;Cache=Shared;Mode=ReadWriteCreate;' \
 	-e USE_DB_TOKEN_STORE=true \
 	-e GOOGLE_TOKENS_ENCRYPTION_KEY="$GOOGLE_TOKENS_ENCRYPTION_KEY" \
 	-e GOOGLE_CLIENT_SECRET_JSON_FILE="/home/username/aiwebsitewatchdog/client_secret.json" \
+	-v /etc/localtime:/etc/localtime:ro \
+	-v /etc/timezone:/etc/timezone:ro \
 	-v app_data:/data \
 	-v app_logs:/app/logs \
 	ghcr.io/anttitane/aiwebsitewatchdog:latest
 
 # Ensure Docker starts at boot so the container restarts on reboot
 sudo systemctl enable docker
+```
+
+Tip (Compose/Portainer): To ensure the container uses your host timezone (so schedules run at local time), add the TZ environment variable and mount the host timezone files in your stack YAML:
+
+```yaml
+services:
+	aiwebsitewatchdog:
+		environment:
+			TZ: Europe/Helsinki
+		volumes:
+			- /etc/localtime:/etc/localtime:ro
+			- /etc/timezone:/etc/timezone:ro
 ```
 
 ### 3. Configuring
