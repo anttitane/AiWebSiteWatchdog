@@ -109,9 +109,10 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
             {
                 _dbContext.WatchTasks.RemoveRange(tasks);
                 await _dbContext.SaveChangesAsync();
+
+                // Invalidate settings cache after bulk delete
+                _cache.Remove(SettingsCacheKey);
             }
-            // Invalidate settings cache after bulk delete
-            _cache.Remove(SettingsCacheKey);
             return (foundIds, notFound);
         }
 
