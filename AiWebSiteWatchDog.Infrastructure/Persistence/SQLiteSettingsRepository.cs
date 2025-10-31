@@ -12,12 +12,11 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
     public class SQLiteSettingsRepository(AppDbContext _dbContext, IMemoryCache cache) : ISettingsRepository
     {
         private readonly IMemoryCache _cache = cache;
-        private const string CacheKey = "UserSettings:Singleton";
         public async Task<UserSettings> LoadAsync()
         {
             try
             {
-                if (_cache.TryGetValue<UserSettings>(CacheKey, out var cached) && cached is not null)
+                if (_cache.TryGetValue<UserSettings>(SettingsCacheKeys.UserSettingsSingleton, out var cached) && cached is not null)
                 {
                     return cached;
                 }
@@ -39,7 +38,7 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
                     {
                         defaults.GeminiApiUrl = GeminiDefaults.ApiUrl;
                     }
-                    _cache.Set(CacheKey, defaults);
+                    _cache.Set(SettingsCacheKeys.UserSettingsSingleton, defaults);
                     return defaults;
                 }
                 // Backfill default if the column exists but value is empty (older rows)
@@ -48,7 +47,7 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
                     settings.GeminiApiUrl = GeminiDefaults.ApiUrl;
                 }
                 Log.Information("Settings loaded successfully from database.");
-                _cache.Set(CacheKey, settings);
+                _cache.Set(SettingsCacheKeys.UserSettingsSingleton, settings);
                 return settings;
             }
             catch (System.Exception ex)
@@ -91,7 +90,7 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
                 }
                 await _dbContext.SaveChangesAsync();
                 // Update cache after save
-                _cache.Set(CacheKey, existing ?? settings);
+                _cache.Set(SettingsCacheKeys.UserSettingsSingleton, existing ?? settings);
                 Log.Information("Settings saved successfully to database.");
             }
             catch (System.Exception ex)

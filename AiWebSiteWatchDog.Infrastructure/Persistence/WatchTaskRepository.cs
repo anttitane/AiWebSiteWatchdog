@@ -5,13 +5,13 @@ using Microsoft.EntityFrameworkCore;
 using Serilog;
 using System.Linq;
 using Microsoft.Extensions.Caching.Memory;
+using AiWebSiteWatchDog.Domain.Constants;
 
 namespace AiWebSiteWatchDog.Infrastructure.Persistence
 {
     public class WatchTaskRepository(AppDbContext _dbContext, IMemoryCache cache)
     {
         private readonly IMemoryCache _cache = cache;
-        private const string SettingsCacheKey = "UserSettings:Singleton";
         public async Task<List<WatchTask>> GetAllAsync()
         {
             return await _dbContext.WatchTasks.AsNoTracking().ToListAsync();
@@ -49,7 +49,7 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
             await _dbContext.SaveChangesAsync();
             Log.Information("WatchTask saved to database with UserSettingsId {UserSettingsId}.", task.UserSettingsId);
             // Invalidate settings cache so /settings returns fresh watchTasks
-            _cache.Remove(SettingsCacheKey);
+            _cache.Remove(SettingsCacheKeys.UserSettingsSingleton);
         }
 
         public async Task<bool> UpdateAsync(int id, WatchTask updated)
@@ -83,7 +83,7 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
 
             await _dbContext.SaveChangesAsync();
             // Invalidate settings cache so /settings reflects updates immediately
-            _cache.Remove(SettingsCacheKey);
+            _cache.Remove(SettingsCacheKeys.UserSettingsSingleton);
             return true;
         }
 
@@ -94,7 +94,7 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
             _dbContext.WatchTasks.Remove(existing);
             await _dbContext.SaveChangesAsync();
             // Invalidate settings cache so deleted tasks disappear from /settings
-            _cache.Remove(SettingsCacheKey);
+            _cache.Remove(SettingsCacheKeys.UserSettingsSingleton);
             return true;
         }
 
@@ -111,7 +111,7 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
                 await _dbContext.SaveChangesAsync();
 
                 // Invalidate settings cache after bulk delete
-                _cache.Remove(SettingsCacheKey);
+                _cache.Remove(SettingsCacheKeys.UserSettingsSingleton);
             }
             return (foundIds, notFound);
         }
@@ -123,7 +123,7 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
             _dbContext.WatchTasks.RemoveRange(tasks);
             var count = await _dbContext.SaveChangesAsync();
             // Invalidate settings cache after deleting all tasks
-            _cache.Remove(SettingsCacheKey);
+            _cache.Remove(SettingsCacheKeys.UserSettingsSingleton);
             return count;
         }
     }
