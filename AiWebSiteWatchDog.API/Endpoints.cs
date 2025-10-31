@@ -1,18 +1,19 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Threading;
+using AiWebSiteWatchDog.API.Jobs;
+using AiWebSiteWatchDog.Application.Parsing;
+using AiWebSiteWatchDog.Domain.DTOs;
+using AiWebSiteWatchDog.Domain.Entities;
+using AiWebSiteWatchDog.Domain.Interfaces;
+using Hangfire;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using System;
-using System.Threading;
-using AiWebSiteWatchDog.Domain.Entities;
-using AiWebSiteWatchDog.Domain.DTOs;
-using AiWebSiteWatchDog.Domain.Interfaces;
-using System.Linq;
-using System.Collections.Generic;
 using Microsoft.AspNetCore.Mvc;
-using AiWebSiteWatchDog.Application.Parsing;
-using Hangfire;
-using AiWebSiteWatchDog.API.Jobs;
+using Microsoft.Extensions.Caching.Memory;
 using Serilog;
-using Microsoft.AspNetCore.RateLimiting;
 
 namespace AiWebSiteWatchDog.API
 {
@@ -380,17 +381,15 @@ namespace AiWebSiteWatchDog.API
             .Produces(StatusCodes.Status200OK)
             .WithDescription("Delete all tasks and remove their scheduled jobs.");
 
-            // Authentication initiation endpoint (triggers Google OAuth consent if not already authorized)
-            // Optional query parameter ?senderEmail= overrides stored settings sender email.
-            app.MapPost("/auth/initiate", async (
+            // Authentication initiation endpoint (web redirect flow)
+            // GET /auth/start?senderEmail=me@example.com
+            app.MapGet("/auth/start", async (
                 [FromServices] Infrastructure.Auth.IGoogleCredentialProvider credentialProvider,
                 [FromServices] ISettingsService settingsService,
+                [FromServices] IMemoryCache cache,
                 HttpRequest request,
-                CancellationToken ct) =>
+                [FromQuery] string? senderEmail) =>
             {
-                // Allow explicit sender email override via query string
-                var senderValues = request.Query["senderEmail"];
-                string? senderEmail = senderValues.Count > 0 ? senderValues[0] : null;
                 if (string.IsNullOrWhiteSpace(senderEmail))
                 {
                     var settings = await settingsService.GetSettingsAsync();
@@ -399,19 +398,95 @@ namespace AiWebSiteWatchDog.API
                     senderEmail = settings.SenderEmail;
                 }
 
+                // Build external redirect URI using request info (respects forwarded headers)
+                var host = request.Scheme + "://" + request.Host.ToUriComponent();
+                var callback = host + "/auth/callback";
+
+                // Create a CSRF state and store mapping to senderEmail for 10 minutes
+                var state = Guid.NewGuid().ToString("n");
+                cache.Set($"oauth:state:{state}", senderEmail!, TimeSpan.FromMinutes(10));
+
+                var url = credentialProvider.CreateAuthorizationUrl(senderEmail!, callback, state);
+                return Results.Redirect(url);
+            })
+            .WithTags("auth")
+            .WithDescription("Starts Google OAuth consent and redirects the client to Google. Optional query ?senderEmail=")
+            .RequireRateLimiting("StrictPerIp");
+
+            // OAuth callback endpoint: Google redirects here with ?code= and ?state=
+            app.MapGet("/auth/callback", async (
+                [FromServices] Infrastructure.Auth.IGoogleCredentialProvider credentialProvider,
+                [FromServices] IMemoryCache cache,
+                HttpRequest request,
+                CancellationToken ct) =>
+            {
+                var code = request.Query["code"].FirstOrDefault();
+                var state = request.Query["state"].FirstOrDefault();
+                if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(state))
+                {
+                    return Results.BadRequest("Missing code or state");
+                }
+                if (!cache.TryGetValue<string>($"oauth:state:{state}", out var senderEmail) || string.IsNullOrWhiteSpace(senderEmail))
+                {
+                    return Results.BadRequest("Invalid or expired state");
+                }
+                // Reconstruct redirectUri for token exchange
+                var host = request.Scheme + "://" + request.Host.ToUriComponent();
+                var callback = host + "/auth/callback";
                 try
                 {
-                    await credentialProvider.GetGmailAndGeminiCredentialAsync(senderEmail!, ct);
-                    return Results.Ok(new { senderEmail, authenticated = true });
+                    await credentialProvider.ExchangeCodeForTokenAsync(senderEmail!, code!, callback, ct);
+                    // Clear state once used
+                    cache.Remove($"oauth:state:{state}");
+                    return Results.Content("Google authorization completed. You may close this window.", "text/plain");
                 }
                 catch (Exception ex)
                 {
-                    return Results.Problem(ex.Message, statusCode: 500);
+                    return Results.Problem(title: "Authorization failed", detail: ex.Message, statusCode: 500);
                 }
             })
-            .WithDescription("Initiate Google OAuth consent for Gmail/Gemini scopes.")
-            .RequireRateLimiting("StrictPerIp")
-            .WithTags("auth");
+            .WithTags("auth")
+            .WithDescription("OAuth2 callback endpoint to complete Google consent and persist tokens.")
+            .DisableRateLimiting();
+
+            // Simple UI page to initiate consent via a clickable button (opens new tab)
+            app.MapGet("/auth", async ([FromServices] ISettingsService settingsService) =>
+            {
+                var settings = await settingsService.GetSettingsAsync();
+                var prefill = WebUtility.HtmlEncode(settings?.SenderEmail ?? string.Empty);
+                                var html = $@"<html>
+                                                <head>
+                                                    <title>Authorize Gmail/Gemini</title>
+                                                    <style>
+                                                        body {{ font-family: sans-serif; margin: 2rem }}
+                                                        input, button {{ font-size: 1rem; padding: .5rem; margin: .25rem 0 }}
+                                                    </style>
+                                                </head>
+                                                <body>
+                                                    <h2>Authorize AiWebSiteWatchDog with Google</h2>
+
+                                                    <p>
+                                                        Click the button to open Google consent in a new tab. After you approve, you can close that tab.
+                                                    </p>
+
+                                                    <form method=""get"" action=""/auth/start"" target=""_blank"">
+                                                        <label>
+                                                            Sender email<br />
+                                                            <input type=""email"" name=""senderEmail"" value=""{prefill}"" required />
+                                                        </label>
+                                                        <br />
+                                                        <button type=""submit"">Open Google consent</button>
+                                                        <p>
+                                                            <small>If your email is saved in settings, you can leave it as-is.</small>
+                                                        </p>
+                                                    </form>
+                                                </body>
+                                            </html>";
+                return Results.Content(html, "text/html");
+            })
+            .WithTags("auth")
+            .WithDescription("Minimal HTML page with a button that opens the Google consent in a new tab.");
+        
         } 
     }
 }

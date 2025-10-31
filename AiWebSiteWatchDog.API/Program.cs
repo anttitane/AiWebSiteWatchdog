@@ -16,7 +16,7 @@ using AiWebSiteWatchDog.API.Configuration;
 // logging configuration can be adjusted without recompiling.
 
 // Simple CLI utility mode: generate encryption key and exit
-if (args.Length == 1 && string.Equals(args[0], "--generate-encryption-key", StringComparison.OrdinalIgnoreCase))
+if (Array.Exists(args, a => string.Equals(a, "--generate-encryption-key", StringComparison.OrdinalIgnoreCase)))
 {
     var bytes = new byte[32]; // 256-bit AES key
     System.Security.Cryptography.RandomNumberGenerator.Fill(bytes);

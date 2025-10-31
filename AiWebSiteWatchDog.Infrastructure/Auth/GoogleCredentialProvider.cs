@@ -2,7 +2,10 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 using Google.Apis.Auth.OAuth2;
+using Google.Apis.Auth.OAuth2.Flows;
+using Google.Apis.Auth.OAuth2.Responses;
 using Google.Apis.Gmail.v1;
 using Serilog;
 using Microsoft.Extensions.Configuration;
@@ -78,10 +81,50 @@ namespace AiWebSiteWatchDog.Infrastructure.Auth
 
         public async Task<UserCredential> GetGmailAndGeminiCredentialAsync(string senderEmail, CancellationToken ct = default)
         {
-            // Allow providing client secret via environment variable OR IConfiguration (user-secrets/appsettings)
-            var clientSecretJson = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET_JSON") ?? _config["GOOGLE_CLIENT_SECRET_JSON"];
+            // Resolve Google OAuth client secret from multiple sources (priority order):
+            // 1) GOOGLE_CLIENT_SECRET_JSON_FILE -> read file contents (supports Docker secrets/bind mounts)
+            // 2) GOOGLE_CLIENT_SECRET_JSON_B64 -> Base64-encoded JSON (avoids quoting issues)
+            // 3) GOOGLE_CLIENT_SECRET_JSON     -> raw JSON string
+            // Also fall back to IConfiguration for all three keys when env var not set.
+
+            string? clientSecretJson = null;
+
+            // 1) File path
+            var secretFile = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET_JSON_FILE")
+                               ?? _config["GOOGLE_CLIENT_SECRET_JSON_FILE"];
+            if (!string.IsNullOrWhiteSpace(secretFile) && File.Exists(secretFile))
+            {
+                clientSecretJson = File.ReadAllText(secretFile);
+            }
+
+            // 2) Base64
             if (string.IsNullOrWhiteSpace(clientSecretJson))
-                throw new InvalidOperationException("GOOGLE_CLIENT_SECRET_JSON environment variable or configuration value is required.");
+            {
+                var secretB64 = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET_JSON_B64")
+                                ?? _config["GOOGLE_CLIENT_SECRET_JSON_B64"];
+                if (!string.IsNullOrWhiteSpace(secretB64))
+                {
+                    try
+                    {
+                        var data = Convert.FromBase64String(secretB64.Trim());
+                        clientSecretJson = System.Text.Encoding.UTF8.GetString(data);
+                    }
+                    catch (FormatException)
+                    {
+                        throw new InvalidOperationException("GOOGLE_CLIENT_SECRET_JSON_B64 must be valid Base64 of the client_secret.json contents");
+                    }
+                }
+            }
+
+            // 3) Raw JSON
+            if (string.IsNullOrWhiteSpace(clientSecretJson))
+            {
+                clientSecretJson = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET_JSON")
+                                   ?? _config["GOOGLE_CLIENT_SECRET_JSON"];
+            }
+
+            if (string.IsNullOrWhiteSpace(clientSecretJson))
+                throw new InvalidOperationException("Client secret is required. Provide GOOGLE_CLIENT_SECRET_JSON, or GOOGLE_CLIENT_SECRET_JSON_FILE, or GOOGLE_CLIENT_SECRET_JSON_B64.");
 
             try
             {
@@ -110,6 +153,135 @@ namespace AiWebSiteWatchDog.Infrastructure.Auth
                 Log.Error(ex, "Failed to acquire Google credential for {SenderEmail}", senderEmail);
                 throw;
             }
+        }
+
+        /// <summary>
+        /// Generates a Google OAuth2 authorization URL for web-based consent (server redirect flow).
+        /// Use together with <see cref="ExchangeCodeForTokenAsync"/> in the callback to store the tokens.
+        /// </summary>
+        public string CreateAuthorizationUrl(string senderEmail, string redirectUri, string? state = null)
+        {
+            // Resolve secrets (supports file/B64/raw env or IConfiguration)
+            var clientSecretJson = ResolveClientSecretJson();
+            using var secretStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(clientSecretJson));
+            var secrets = GoogleClientSecrets.FromStream(secretStream).Secrets;
+
+            IDataStore dataStore = _useDbStore
+                ? new DbEncryptedDataStore(_dbContext, _encryptionKey!)
+                : CreateFileStore(senderEmail);
+
+            using var flow = new GoogleAuthorizationCodeFlow(new GoogleAuthorizationCodeFlow.Initializer
+            {
+                ClientSecrets = secrets,
+                Scopes = Scopes,
+                DataStore = dataStore
+            });
+            
+            var url = flow.CreateAuthorizationCodeRequest(redirectUri);
+            if (!string.IsNullOrWhiteSpace(state)) url.State = state;
+            var built = url.Build().ToString();
+            built = ReplaceOrAddQueryParam(built, "access_type", "offline");
+            built = ReplaceOrAddQueryParam(built, "prompt", "consent");
+            built = ReplaceOrAddQueryParam(built, "include_granted_scopes", "true");
+            return built;
+        }
+
+        /// <summary>
+        /// Exchanges the authorization code for tokens and persists them via the configured IDataStore.
+        /// Returns a usable UserCredential.
+        /// </summary>
+        public async Task<UserCredential> ExchangeCodeForTokenAsync(string senderEmail, string code, string redirectUri, CancellationToken ct = default)
+        {
+            var clientSecretJson = ResolveClientSecretJson();
+            using var secretStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(clientSecretJson));
+            var secrets = GoogleClientSecrets.FromStream(secretStream).Secrets;
+
+            IDataStore dataStore = _useDbStore
+                ? new DbEncryptedDataStore(_dbContext, _encryptionKey!)
+                : CreateFileStore(senderEmail);
+
+            using var flow = new GoogleAuthorizationCodeFlow(new GoogleAuthorizationCodeFlow.Initializer
+            {
+                ClientSecrets = secrets,
+                Scopes = Scopes,
+                DataStore = dataStore
+            });
+
+            TokenResponse token = await flow.ExchangeCodeForTokenAsync(senderEmail, code, redirectUri, ct);
+            return new UserCredential(flow, senderEmail, token);
+        }
+
+        private string ResolveClientSecretJson()
+        {
+            // 1) File path
+            var secretFile = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET_JSON_FILE")
+                               ?? _config["GOOGLE_CLIENT_SECRET_JSON_FILE"];
+            if (!string.IsNullOrWhiteSpace(secretFile) && File.Exists(secretFile))
+            {
+                return File.ReadAllText(secretFile);
+            }
+            // 2) Base64
+            var secretB64 = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET_JSON_B64")
+                             ?? _config["GOOGLE_CLIENT_SECRET_JSON_B64"];
+            if (!string.IsNullOrWhiteSpace(secretB64))
+            {
+                try
+                {
+                    var data = Convert.FromBase64String(secretB64.Trim());
+                    return System.Text.Encoding.UTF8.GetString(data);
+                }
+                catch (FormatException ex)
+                {
+                    throw new InvalidOperationException("GOOGLE_CLIENT_SECRET_JSON_B64 is not a valid Base64 string.", ex);
+                }
+            }
+            // 3) Raw JSON
+            var clientSecretJson = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET_JSON")
+                                   ?? _config["GOOGLE_CLIENT_SECRET_JSON"];
+            if (string.IsNullOrWhiteSpace(clientSecretJson))
+                throw new InvalidOperationException("Client secret is required. Provide GOOGLE_CLIENT_SECRET_JSON, or GOOGLE_CLIENT_SECRET_JSON_FILE, or GOOGLE_CLIENT_SECRET_JSON_B64.");
+            return clientSecretJson;
+        }
+
+        private static string ReplaceOrAddQueryParam(string url, string key, string value)
+        {
+            var builder = new UriBuilder(url);
+            var query = builder.Query; // starts with '?'
+            var items = new List<(string k, string v)>();
+            if (!string.IsNullOrEmpty(query))
+            {
+                var pairs = query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries);
+                foreach (var p in pairs)
+                {
+                    var idx = p.IndexOf('=');
+                    if (idx >= 0)
+                    {
+                        var k = Uri.UnescapeDataString(p.Substring(0, idx));
+                        var v = Uri.UnescapeDataString(p.Substring(idx + 1));
+                        items.Add((k, v));
+                    }
+                    else if (p.Length > 0)
+                    {
+                        items.Add((Uri.UnescapeDataString(p), string.Empty));
+                    }
+                }
+            }
+
+            // remove existing key(s) (case-insensitive)
+            items.RemoveAll(t => string.Equals(t.k, key, StringComparison.OrdinalIgnoreCase));
+            // add desired value
+            items.Add((key, value));
+
+            var sb = new System.Text.StringBuilder();
+            for (int i = 0; i < items.Count; i++)
+            {
+                if (i > 0) sb.Append('&');
+                sb.Append(Uri.EscapeDataString(items[i].k));
+                sb.Append('=');
+                sb.Append(Uri.EscapeDataString(items[i].v));
+            }
+            builder.Query = sb.ToString();
+            return builder.Uri.ToString();
         }
 
         private static IDataStore CreateFileStore(string senderEmail)

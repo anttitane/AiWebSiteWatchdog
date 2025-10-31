@@ -11,11 +11,18 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       ConnectionStrings__DefaultConnection: Data Source=/data/app.db
       ConnectionStrings__HangfireConnection: Data Source=/data/app.db;Cache=Shared;Mode=ReadWriteCreate;
+      # Provide Google OAuth client secret JSON via a mounted file (preferred for Docker)
+      GOOGLE_CLIENT_SECRET_JSON_FILE: /app/secrets/google_client_secret.json
+      USE_DB_TOKEN_STORE: "true"
+      GOOGLE_TOKENS_ENCRYPTION_KEY: ${GOOGLE_TOKENS_ENCRYPTION_KEY}
     volumes:
       # Persist application data (SQLite DB at /data/app.db)
       - app_data:/data
       # Persist logs written to /app/logs by Serilog
       - app_logs:/app/logs
+      # Mount the Google client_secret.json as read-only inside the container
+      # Replace ./client_secret.json with your actual path if different
+      - ./client_secret.json:/app/secrets/google_client_secret.json:ro
     restart: unless-stopped
 
 volumes:

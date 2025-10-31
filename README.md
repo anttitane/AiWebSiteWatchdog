@@ -1,30 +1,12 @@
 # AiWebSiteWatchdog
 
-Motivation
-----------
-
+### About
 Have you ever needed to check a website regularly to see if something relevant has been posted? I have. This project began when my hometown surprised residents by adding parking restriction signs on our street. The change was recorded in the city council minutes, but I hadn’t noticed them. Manually scanning the large volume of meeting minutes is time-consuming and needs to be done regularly. This application automates that work and notifies you when meeting minutes (or other monitored pages) contain items of interest.
 
-Overview
---------
+### Overview
+AiWebSiteWatchdog periodically scans configured websites and alerts you when content matches your interests. You describe what you care about in plain English (a natural‑language prompt), and the built‑in AI (Gemini) reads the page and decides if it’s relevant—no regexes or anything complicated required. Under the hood it uses Hangfire for scheduling, EF Core + SQLite for persistence, the Google Gemini generative API for content extraction/analysis, and Gmail API for notifications.
 
-AiWebSiteWatchdog periodically scans configured websites for matches against user-defined interests and notifies users when relevant changes are detected. It uses Hangfire for scheduling, EF Core + SQLite for persistence, the Google Gemini generative API for content extraction/analysis, and Gmail API for notifications.
-
-Security note
--------------
-
-This service is intended to run on a private, trusted network (intranet, internal cloud VNet). Do not expose the application directly to the public internet without appropriate controls (authenticated reverse proxy, VPN, IP allowlist, WAF). See the Security & Secrets section for guidance.
-
-Prerequisites
--------------
-
-- .NET 9 SDK
-- A Google Cloud project with Gmail & Generative Language (Gemini) APIs enabled
-- (Optional) Docker for containerized runs
-
-Key .NET conventions & technologies
-----------------------------------
-
+### Key .NET conventions & technologies
 - Platform: .NET 9, minimal API (WebApplication) in `AiWebSiteWatchDog.API/Program.cs`
 - DI: built-in Microsoft DI; register services with appropriate lifetimes
 - Configuration: `appsettings.json` + environment variables (double-underscore mapping)
@@ -35,19 +17,8 @@ Key .NET conventions & technologies
 - Central package version management via Directory.Packages.props (PackageVersion entries).
 - Clean architecture
 
-Where to look in the codebase
-----------------------------
-
-- Startup & DI: `AiWebSiteWatchDog.API/Program.cs`
-- Endpoints: `AiWebSiteWatchDog.API/Endpoints.cs`
-- Background job runner: `AiWebSiteWatchDog.API/Jobs/WatchTaskJobRunner.cs`
-- Gemini client: `AiWebSiteWatchDog.Infrastructure/Gemini/GeminiApiClient.cs`
-- Email sending: `AiWebSiteWatchDog.Infrastructure/Email/EmailSender.cs`
-- Google auth/token handling: `AiWebSiteWatchDog.Infrastructure/Auth/GoogleCredentialProvider.cs`
-- Persistence: `AiWebSiteWatchDog.Infrastructure/Persistence/` and domain entities under `AiWebSiteWatchDog.Domain/Entities/`
-
-Getting Google OAuth2 credentials
----------------------------------
+## Running AiWebSiteWatchdog
+### 1. Getting Google OAuth2 credentials
 
 This app uses the Gmail and Gemini API via Google Cloud and OAuth2 for secure email delivery and Gemini usage:
 
@@ -68,21 +39,113 @@ To send email using the Gmail API, you need a Google OAuth2 client_secret.json f
 4. Go to "APIs & Services" > "Credentials".
 5. Click "Create Credentials" > "OAuth client ID".
 6. If prompted, configure the consent screen (fill in required fields).
-7. Choose "Desktop app" (for local testing) or "Web application" (for server).
-8. Enter a name and click "Create".
-9. Download the `client_secret.json` file.
-10. Open the file and copy its contents. Set it as an environment variable `GOOGLE_CLIENT_SECRET_JSON` (see Environment Variables section below).
-11. On "Data access" tab add scopes for `.../auth/gmail.send` and `./auth/generative-language.peruserquota`
-12. Save changes.
+7. Choose "Web application".
+8. For "Authorised redirect URIs" add your `/auth/callback`endpoint URL (eg. http://localhost:8080/auth/callback)
+9. Enter a name and click "Create".
+10. Download the `client_secret.json` file. It contains your OAuth client_id and client_secret plus metadata (redirect URIs, etc.). The client_id identifies the app for Google. The client_secret is used during the authorization code exchange and token refresh. Think of it as the app’s credentials, distinct from the user’s credentials. OAuth is “delegated” access: the user grants permission, but the app must present its own identity when exchanging/refreshing tokens.
+11. Open the file and copy its contents. Set it as an environment variable `GOOGLE_CLIENT_SECRET_JSON` (see instructions below).
+12. On "Data access" tab add scopes for `.../auth/gmail.send` and `./auth/generative-language.peruserquota`
+13. Save changes.
 
 **Important:**
 - If your OAuth consent screen is in testing mode, you must add your Google account as a test user in the "Test users" section of the consent screen (found in the audience tab).
 - Alternatively, you can publish the app to make it available to all users in your organization or publicly.
 - The app requests both Gmail send and Gemini (Generative Language) scopes using a single combined consent; if scopes change later you must re-consent (delete stored token row / token files).
 
-Configuration (appsettings.json & environment variables)
-------------------------------------------------------
+### 2. Running the Application
+**Security note:
+This service is intended to run on a private, trusted network (intranet, internal cloud VNet). Do not expose the application directly to the public internet without appropriate controls (authenticated reverse proxy, VPN, IP allowlist, WAF). See the Security & Secrets section for guidance.**
 
+#### Docker Setup
+The quickest way to get started is to pull and run the prebuilt image from GitHub Container Registry (GHCR):
+
+```pwsh
+docker pull ghcr.io/anttitane/aiwebsitewatchdog:latest
+```
+
+Then run it with your configuration and two named volumes (for the SQLite DB and logs):
+
+Windows (PowerShell):
+
+```pwsh
+# Load client secret JSON content into an env var
+$env:GOOGLE_CLIENT_SECRET_JSON = Get-Content -Raw .\client_secret.json
+
+# Generate an encryption key (one-time) using the image
+docker run --rm ghcr.io/anttitane/aiwebsitewatchdog:latest --generate-encryption-key
+
+# Save the printed Base64 value
+$env:GOOGLE_TOKENS_ENCRYPTION_KEY = "<Base64-AES-256>"
+
+# Run the container (example)
+docker run -d --name aiwebsitewatchdog -p 8080:8080 `
+	-e ASPNETCORE_ENVIRONMENT=Development `
+	-e ConnectionStrings__DefaultConnection='Data Source=/data/app.db' `
+	-e ConnectionStrings__HangfireConnection='Data Source=/data/app.db;Cache=Shared;Mode=ReadWriteCreate;' `
+	-e USE_DB_TOKEN_STORE=true `
+	-e GOOGLE_TOKENS_ENCRYPTION_KEY="$env:GOOGLE_TOKENS_ENCRYPTION_KEY" `
+	-e GOOGLE_CLIENT_SECRET_JSON="$env:GOOGLE_CLIENT_SECRET_JSON" `
+	-v app_data:/data `
+	-v app_logs:/app/logs `
+	ghcr.io/anttitane/aiwebsitewatchdog:latest
+```
+
+Ubuntu Linux (bash):
+
+```bash
+# Copy client secret JSON file to folder of your choice
+
+# Generate an encryption key (one-time) using the image
+docker run --rm ghcr.io/anttitane/aiwebsitewatchdog:latest --generate-encryption-key
+
+# Save the printed Base64 value
+export GOOGLE_TOKENS_ENCRYPTION_KEY="<Base64-AES-256>"
+
+# Run the container (example)
+docker run -d --name aiwebsitewatchdog -p 8080:8080 \
+	-e ASPNETCORE_ENVIRONMENT=Development \
+	-e ConnectionStrings__DefaultConnection='Data Source=/data/app.db' \
+	-e ConnectionStrings__HangfireConnection='Data Source=/data/app.db;Cache=Shared;Mode=ReadWriteCreate;' \
+	-e USE_DB_TOKEN_STORE=true \
+	-e GOOGLE_TOKENS_ENCRYPTION_KEY="$GOOGLE_TOKENS_ENCRYPTION_KEY" \
+	-e GOOGLE_CLIENT_SECRET_JSON_FILE="/home/username/aiwebsitewatchdog/client_secret.json" \
+	-v app_data:/data \
+	-v app_logs:/app/logs \
+	ghcr.io/anttitane/aiwebsitewatchdog:latest
+
+# Ensure Docker starts at boot so the container restarts on reboot
+sudo systemctl enable docker
+```
+
+### 3. Configuring
+
+Once running:
+- Swagger UI: http://localhost:8080/swagger
+- Health: http://localhost:8080/health
+- Hangfire Dashboard: http://localhost:8080/hangfire
+
+Configuring:
+- Authenticate to Google using endpoint `GET /auth` by opening http://localhost:8080/auth on your server using a web browser (this must be done on a server that has a graphical desktop) and give consent to scopes (Gmail send + Gemini). You need to do this only once. Note that it's not possible to complete the consent flow from another PC (than your server) on your local network. 
+- Setup settings `PUT /settings`
+- Create a watch task `POST /tasks`
+
+## Development instructions
+
+### Prerequisites
+- .NET 9 SDK
+- A Google Cloud project with Gmail & Generative Language (Gemini) APIs enabled
+- (Optional) Docker for containerized runs
+
+### Where to look in the codebase
+- Startup & DI: `AiWebSiteWatchDog.API/Program.cs`
+- Endpoints: `AiWebSiteWatchDog.API/Endpoints.cs`
+- Background job runner: `AiWebSiteWatchDog.API/Jobs/WatchTaskJobRunner.cs`
+- Gemini client: `AiWebSiteWatchDog.Infrastructure/Gemini/GeminiApiClient.cs`
+- Email sending: `AiWebSiteWatchDog.Infrastructure/Email/EmailSender.cs`
+- Google auth/token handling: `AiWebSiteWatchDog.Infrastructure/Auth/GoogleCredentialProvider.cs`
+- Persistence: `AiWebSiteWatchDog.Infrastructure/Persistence/` and domain entities under `AiWebSiteWatchDog.Domain/Entities/`
+
+### Configuration (appsettings.json & environment variables)
 The application reads configuration from `appsettings.json`. Environment variables override values from `appsettings.json`. Use double-underscore to set hierarchical keys as env vars (for example `ConnectionStrings__DefaultConnection` maps to `ConnectionStrings:DefaultConnection`).
 
 Important configuration keys
@@ -100,8 +163,17 @@ Secrets (do NOT commit)
 - `GOOGLE_CLIENT_SECRET_JSON`: raw client_secret.json contents (required)
 - `GOOGLE_TOKENS_ENCRYPTION_KEY`: Base64 AES key used to encrypt DB token rows (required if DB store is enabled)
 
-Generating an encryption key
----------------------------
+### Token storage behavior
+| Mode | Trigger | Location | Notes |
+|---|---|---|---|
+| Filesystem | `Google:UseDbTokenStore` = false | Hashed folder under OS profile/config path | Simpler for single-instance dev runs |
+| Database (encrypted) | `Google:UseDbTokenStore` = true | `GoogleOAuthTokens` table | Requires `GOOGLE_TOKENS_ENCRYPTION_KEY` to decrypt; recommended for multi-instance deployments |
+
+### Logging
+Serilog is configured in `appsettings.json`. The file sink is set to daily roll and retention; adjust `Serilog` section in `appsettings.json` or via env vars to change behavior.
+
+
+### Generating an encryption key
 
 The app can generate a secure AES-256 key and exit:
 
@@ -111,8 +183,7 @@ dotnet run --project .\AiWebSiteWatchDog.API -- --generate-encryption-key
 
 The command prints a Base64 string you should store in a secret manager and set as `GOOGLE_TOKENS_ENCRYPTION_KEY`.
 
-Running locally (development)
------------------------------
+### Running locally in Windows
 
 Set the required env vars and run:
 
@@ -122,31 +193,7 @@ $env:ConnectionStrings__DefaultConnection = 'Data Source=AiWebSitewatchdog.db'
 dotnet run --project .\AiWebSiteWatchDog.API
 ```
 
-Docker (single container)
--------------------------
-
-If you prefer a one-off run without Compose, you can run the container directly and inject configuration via environment variables:
-
-```pwsh
-# Replace ghcr.io/anttitane/aiwebsitewatchdog:latest with your image tag
-docker run --rm -p 8080:8080 `
-	-e ASPNETCORE_ENVIRONMENT=Development `
-	-e ConnectionStrings__DefaultConnection='Data Source=/data/app.db' `
-	-e ConnectionStrings__HangfireConnection='Data Source=/data/app.db;Cache=Shared;Mode=ReadWriteCreate;' `
-	-e GOOGLE_CLIENT_SECRET_JSON="$($env:GOOGLE_CLIENT_SECRET_JSON)" `
-	-v app_data:/data `
-	-v app_logs:/app/logs `
-	ghcr.io/anttitane/aiwebsitewatchdog:latest
-```
-
-Notes:
-- The container listens on port 8080; adjust the left side of -p accordingly.
-- We mount two named volumes: app_data for the SQLite file at /data/app.db and app_logs for Serilog file output at /app/logs.
-- GOOGLE_CLIENT_SECRET_JSON should contain the content of your client_secret.json (do not bake it into the image).
-
-Docker Compose (recommended)
-----------------------------
-
+### Running using Docker compose
 This repo includes a `docker-compose.yml` that wires sensible defaults:
 - Maps port 8080 → 8080
 - Persists data and logs to named volumes (`app_data`, `app_logs`)
@@ -154,6 +201,17 @@ This repo includes a `docker-compose.yml` that wires sensible defaults:
 - Enables console logging (visible via `docker compose logs`)
 
 Basic usage:
+```pwsh
+# Load client secret JSON content into an env var
+$env:GOOGLE_CLIENT_SECRET_JSON = Get-Content -Raw .\client_secret.json
+
+# Get encryption key
+docker run --rm aiwebsitewatchdog --generate-encryption-key
+
+# Save the printed Base64 value
+$env:GOOGLE_TOKENS_ENCRYPTION_KEY = "<Base64-AES-256>"
+```
+
 
 ```pwsh
 # Build and start in the background
@@ -165,27 +223,6 @@ docker compose logs -f aiwebsitewatchdog
 # Stop and remove containers
 docker compose down
 ```
-
-Environment configuration:
-- Override configuration via environment variables in `docker-compose.yml` (mapping syntax)
-	- `ConnectionStrings__DefaultConnection: Data Source=/data/app.db`
-	- `ConnectionStrings__HangfireConnection: Data Source=/data/app.db;Cache=Shared;Mode=ReadWriteCreate;`
-	- `ASPNETCORE_ENVIRONMENT: Development` (so Swagger UI is available at `/swagger`)
-- Provide secrets at runtime (example for PowerShell):
-
-```pwsh
-$env:GOOGLE_CLIENT_SECRET_JSON = Get-Content -Raw .\client_secret.json
-# Optionally, set an encryption key if using DB token store
-# $env:GOOGLE_TOKENS_ENCRYPTION_KEY = "<Base64-AES-256>"
-
-# Then start compose (env vars are inherited by Docker on Windows)
-docker compose up -d --build
-```
-
-Endpoints to try:
-- Swagger UI: http://localhost:8080/swagger
-- Health: http://localhost:8080/health
-- Hangfire Dashboard: http://localhost:8080/hangfire
 
 Inspecting logs and data volumes:
 
@@ -199,16 +236,3 @@ docker compose exec aiwebsitewatchdog ls -la /app/logs
 # Copy logs to host
 docker cp aiwebsitewatchdog:/app/logs .\logs-copy
 ```
-
-Token storage behavior
-----------------------
-
-| Mode | Trigger | Location | Notes |
-|---|---|---|---|
-| Filesystem | `Google:UseDbTokenStore` = false | Hashed folder under OS profile/config path | Simpler for single-instance dev runs |
-| Database (encrypted) | `Google:UseDbTokenStore` = true | `GoogleOAuthTokens` table | Requires `GOOGLE_TOKENS_ENCRYPTION_KEY` to decrypt; recommended for multi-instance deployments |
-
-Logging
--------
-
-Serilog is configured in `appsettings.json`. The file sink is set to daily roll and retention; adjust `Serilog` section in `appsettings.json` or via env vars to change behavior.
