@@ -4,11 +4,14 @@ using AiWebSiteWatchDog.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using System.Linq;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace AiWebSiteWatchDog.Infrastructure.Persistence
 {
-    public class WatchTaskRepository(AppDbContext _dbContext)
+    public class WatchTaskRepository(AppDbContext _dbContext, IMemoryCache cache)
     {
+        private readonly IMemoryCache _cache = cache;
+        private const string SettingsCacheKey = "UserSettings:Singleton";
         public async Task<List<WatchTask>> GetAllAsync()
         {
             return await _dbContext.WatchTasks.AsNoTracking().ToListAsync();
@@ -45,6 +48,8 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
             await _dbContext.WatchTasks.AddAsync(task);
             await _dbContext.SaveChangesAsync();
             Log.Information("WatchTask saved to database with UserSettingsId {UserSettingsId}.", task.UserSettingsId);
+            // Invalidate settings cache so /settings returns fresh watchTasks
+            _cache.Remove(SettingsCacheKey);
         }
 
         public async Task<bool> UpdateAsync(int id, WatchTask updated)
@@ -77,6 +82,8 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
                 existing.LastResult = updated.LastResult;
 
             await _dbContext.SaveChangesAsync();
+            // Invalidate settings cache so /settings reflects updates immediately
+            _cache.Remove(SettingsCacheKey);
             return true;
         }
 
@@ -86,6 +93,8 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
             if (existing == null) return false;
             _dbContext.WatchTasks.Remove(existing);
             await _dbContext.SaveChangesAsync();
+            // Invalidate settings cache so deleted tasks disappear from /settings
+            _cache.Remove(SettingsCacheKey);
             return true;
         }
 
@@ -101,6 +110,8 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
                 _dbContext.WatchTasks.RemoveRange(tasks);
                 await _dbContext.SaveChangesAsync();
             }
+            // Invalidate settings cache after bulk delete
+            _cache.Remove(SettingsCacheKey);
             return (foundIds, notFound);
         }
 
@@ -109,7 +120,10 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
             var tasks = await _dbContext.WatchTasks.ToListAsync();
             if (tasks.Count == 0) return 0;
             _dbContext.WatchTasks.RemoveRange(tasks);
-            return await _dbContext.SaveChangesAsync();
+            var count = await _dbContext.SaveChangesAsync();
+            // Invalidate settings cache after deleting all tasks
+            _cache.Remove(SettingsCacheKey);
+            return count;
         }
     }
 }
