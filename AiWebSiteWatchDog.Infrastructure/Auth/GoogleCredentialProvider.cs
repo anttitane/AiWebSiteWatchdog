@@ -225,8 +225,15 @@ namespace AiWebSiteWatchDog.Infrastructure.Auth
                              ?? _config["GOOGLE_CLIENT_SECRET_JSON_B64"];
             if (!string.IsNullOrWhiteSpace(secretB64))
             {
-                var data = Convert.FromBase64String(secretB64.Trim());
-                return System.Text.Encoding.UTF8.GetString(data);
+                try
+                {
+                    var data = Convert.FromBase64String(secretB64.Trim());
+                    return System.Text.Encoding.UTF8.GetString(data);
+                }
+                catch (FormatException ex)
+                {
+                    throw new InvalidOperationException("GOOGLE_CLIENT_SECRET_JSON_B64 is not a valid Base64 string.", ex);
+                }
             }
             // 3) Raw JSON
             var clientSecretJson = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET_JSON")
