@@ -6,7 +6,10 @@ Have you ever needed to check a website regularly to see if something relevant h
 ### Overview
 AiWebSiteWatchdog periodically scans configured websites and alerts you when content matches your interests. You describe what you care about in plain English (a natural‑language prompt), and the built‑in AI (Gemini) reads the page and decides if it’s relevant—no regexes or anything complicated required. Under the hood it uses Hangfire for scheduling, EF Core + SQLite for persistence, the Google Gemini generative API for content extraction/analysis, and Gmail API for notifications.
 
-### Key .NET conventions & technologies
+The project also includes a lightweight single‑page application (SPA) built with React + TypeScript + Vite. In development, the UI runs on the Vite dev server (default http://localhost:5173) and proxies API calls to the backend (default http://localhost:5050). In production, the UI is prebuilt and served as static files by the ASP.NET Core app (Kestrel) from `wwwroot`.
+
+### Key conventions & technologies
+#### Backend
 - Platform: .NET 9, minimal API (WebApplication) in `AiWebSiteWatchDog.API/Program.cs`
 - DI: built-in Microsoft DI; register services with appropriate lifetimes
 - Configuration: `appsettings.json` + environment variables (double-underscore mapping)
@@ -16,6 +19,13 @@ AiWebSiteWatchdog periodically scans configured websites and alerts you when con
 - Logging: Serilog (configured via appsettings)
 - Central package version management via Directory.Packages.props (PackageVersion entries).
 - Clean architecture
+
+#### Frontend
+- Stack: React 18 + TypeScript + Vite in `AiWebSiteWatchDog.API/ClientApp`
+- HTTP client: Axios with a shared `api` instance and small `services/` layer (`settings`, `tasks`, `notifications`)
+- Dev server: Vite on port 5173 with proxy to the API on 5050 (configurable); optional `VITE_BACKEND_URL` for absolute base URL
+- Build & hosting: `vite build` output is copied to `wwwroot` and served by Kestrel; Docker multi‑stage build includes the frontend
+- DX: simple components with modals for Settings/Tasks/Notifications; VS Code tasks/launch run API + Vite together for F5 debugging
 
 ## Running AiWebSiteWatchdog
 ### 1. Getting Google OAuth2 credentials
@@ -135,14 +145,16 @@ services:
 ### 3. Configuring
 
 Once running:
+- User interface: http://localhost:8080
 - Swagger UI: http://localhost:8080/swagger
 - Health: http://localhost:8080/health
 - Hangfire Dashboard: http://localhost:8080/hangfire
 
 Configuring:
-- Authenticate to Google using endpoint `GET /auth` by opening http://localhost:8080/auth on your server using a web browser (this must be done on a server that has a graphical desktop) and give consent to scopes (Gmail send + Gemini). You need to do this only once. Note that it's not possible to complete the consent flow from another PC (than your server) on your local network. 
-- Setup settings `PUT /settings`
-- Create a watch task `POST /tasks`
+- Add your settings
+- Authorize Google. 
+	- **Note:** Do this on your server using a web browser (this must be done on a server that has a graphical desktop) and give consent to scopes (Gmail send + Gemini). You need to do this only once. Note that it's not possible to complete the consent flow from another PC (than your server) even on your local network. 
+- Create tasks
 
 ## Development instructions
 
@@ -207,6 +219,12 @@ $env:GOOGLE_CLIENT_SECRET_JSON = Get-Content -Raw .\client_secret.json
 $env:ConnectionStrings__DefaultConnection = 'Data Source=AiWebSitewatchdog.db'
 dotnet run --project .\AiWebSiteWatchDog.API
 ```
+
+Once running:
+- User interface: http://localhost:5050
+- Swagger UI: http://localhost:5050/swagger
+- Health: http://localhost:5050/health
+- Hangfire Dashboard: http://localhost:5050/hangfire
 
 ### Running using Docker compose
 This repo includes a `docker-compose.yml` that wires sensible defaults:
