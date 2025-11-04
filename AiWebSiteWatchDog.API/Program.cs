@@ -118,6 +118,10 @@ if (app.Environment.IsDevelopment())
 // Enable rate limiting middleware
 app.UseConfiguredRateLimiting();
 
+// Serve static frontend (React) if present
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 // Ensure database is migrated and tables are created
 AiWebSiteWatchDog.Infrastructure.Persistence.DbInitializer.EnsureMigrated(app.Services);
 
@@ -174,5 +178,8 @@ if (app.Environment.IsDevelopment() || app.Environment.IsStaging() || app.Enviro
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+// SPA fallback: route unknown paths to index.html so client-side routing works
+app.MapFallbackToFile("/index.html");
 
 app.Run();
