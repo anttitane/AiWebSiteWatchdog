@@ -1,16 +1,37 @@
 {
-	"version": "2.0.0",
-	"tasks": [
-		{
-			"label": "build",
-			"type": "process",
-			"command": "dotnet",
-			"args": [
-				"build",
-				"AiWebSiteWatchDog.sln"
-			],
-			"problemMatcher": "$msCompile",
-			"group": "build"
-		}
-	]
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "vite dev",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "dev"],
+      "options": {
+        "cwd": "${workspaceFolder}/AiWebSiteWatchDog.API/ClientApp"
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "custom",
+        "pattern": [
+          { "regexp": ".*" }
+        ],
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^\\s*VITE v\\d+",
+          "endsPattern": "Local:.*http://localhost:5173/"
+        }
+      }
+    },
+	{
+		"label": "build",
+		"type": "process",
+		"command": "dotnet",
+		"args": [
+			"build",
+			"AiWebSiteWatchDog.sln"
+		],
+		"problemMatcher": "$msCompile",
+		"group": "build"
+	},
+  ]
 }

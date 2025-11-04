@@ -22,7 +22,16 @@ RUN dotnet restore AiWebSiteWatchDog.API/AiWebSiteWatchDog.API.csproj
 COPY . .
 RUN dotnet publish AiWebSiteWatchDog.API/AiWebSiteWatchDog.API.csproj -c Release -o /app/publish --no-restore
 
+# Build frontend (React) and place assets alongside published app
+FROM node:20-alpine AS frontend
+WORKDIR /ui
+COPY AiWebSiteWatchDog.API/ClientApp ./ClientApp
+WORKDIR /ui/ClientApp
+RUN npm ci || npm install
+RUN npm run build
+
 FROM base AS final
 WORKDIR /app
 COPY --from=build /app/publish .
+COPY --from=frontend /ui/ClientApp/dist ./wwwroot
 ENTRYPOINT ["dotnet", "AiWebSiteWatchDog.API.dll"]
