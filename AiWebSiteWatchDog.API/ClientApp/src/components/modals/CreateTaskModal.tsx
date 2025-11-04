@@ -18,7 +18,7 @@ export default function CreateTaskModal({ open, newTask, setNewTask, creating, o
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8 }}>
           <label>
             Title
-              <input
+            <input
               type="text"
               value={newTask.title}
               onChange={e => setNewTask(s => ({ ...s, title: e.target.value }))}
@@ -28,7 +28,7 @@ export default function CreateTaskModal({ open, newTask, setNewTask, creating, o
           </label>
           <label>
             URL (remember to include https:// or http://)
-              <input
+            <input
               type="url"
               value={newTask.url}
               onChange={e => setNewTask(s => ({ ...s, url: e.target.value }))}
@@ -38,7 +38,7 @@ export default function CreateTaskModal({ open, newTask, setNewTask, creating, o
           </label>
           <label>
             Task prompt
-              <textarea
+            <textarea
               value={newTask.taskPrompt}
               onChange={e => setNewTask(s => ({ ...s, taskPrompt: e.target.value }))}
               placeholder="Explain what AI should look from the page"
@@ -48,7 +48,7 @@ export default function CreateTaskModal({ open, newTask, setNewTask, creating, o
           </label>
           <label>
             Schedule (cron, 5 or 6 fields)
-              <input
+            <input
               type="text"
               value={newTask.schedule}
               onChange={e => setNewTask(s => ({ ...s, schedule: e.target.value }))}
