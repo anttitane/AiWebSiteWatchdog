@@ -125,10 +125,11 @@ app.UseStaticFiles();
 // Ensure database is migrated and tables are created
 AiWebSiteWatchDog.Infrastructure.Persistence.DbInitializer.EnsureMigrated(app.Services);
 
-// Schedule the watch task using Hangfire
+// Schedule the watch tasks using DI-based Hangfire manager to avoid relying on static storage
 using (var scope = app.Services.CreateScope())
 {
     var taskRepo = scope.ServiceProvider.GetRequiredService<AiWebSiteWatchDog.Infrastructure.Persistence.WatchTaskRepository>();
+    var jobs = scope.ServiceProvider.GetRequiredService<IRecurringJobManager>();
     var tasks = taskRepo.GetAllAsync().GetAwaiter().GetResult();
     foreach (var t in tasks)
     {
@@ -136,23 +137,23 @@ using (var scope = app.Services.CreateScope())
         if (!t.Enabled)
         {
             // Ensure disabled tasks are not scheduled
-            RecurringJob.RemoveIfExists(recurringId);
+            jobs.RemoveIfExists(recurringId);
             continue;
         }
         if (string.IsNullOrWhiteSpace(t.Schedule))
         {
             // No schedule provided -> ensure no lingering job exists
-            RecurringJob.RemoveIfExists(recurringId);
+            jobs.RemoveIfExists(recurringId);
             continue;
         }
         var parts = t.Schedule.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length is 5 or 6)
         {
-                try
-                {
-                    var options = new RecurringJobOptions { TimeZone = TimeZoneInfo.Local };
-                    RecurringJob.AddOrUpdate<WatchTaskJobRunner>(recurringId, r => r.ExecuteAsync(t.Id), t.Schedule, options);
-                }
+            try
+            {
+                var options = new RecurringJobOptions { TimeZone = TimeZoneInfo.Local };
+                jobs.AddOrUpdate<WatchTaskJobRunner>(recurringId, r => r.ExecuteAsync(t.Id), t.Schedule, options);
+            }
             catch (Exception ex)
             {
                 Log.Warning(ex, "Failed to schedule watch task {TaskId} with cron expression: {Schedule}", t.Id, t.Schedule);
@@ -162,7 +163,7 @@ using (var scope = app.Services.CreateScope())
         {
             Log.Warning("Invalid cron expression for watch task {TaskId}: {Schedule}. Expected 5 or 6 fields. Skipping.", t.Id, t.Schedule);
             // Also make sure any existing job is removed
-            RecurringJob.RemoveIfExists(recurringId);
+            jobs.RemoveIfExists(recurringId);
         }
     }
 }
