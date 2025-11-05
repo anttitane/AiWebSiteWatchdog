@@ -52,7 +52,9 @@ namespace AiWebSiteWatchDog.API
             .WithTags("Tasks")
             .Produces<IEnumerable<WatchTaskDto>>(StatusCodes.Status200OK);
 
-            app.MapPost("/tasks", async ([FromServices] AiWebSiteWatchDog.Infrastructure.Persistence.WatchTaskRepository repo, CreateWatchTaskRequest request) =>
+            app.MapPost("/tasks", async ([FromServices] AiWebSiteWatchDog.Infrastructure.Persistence.WatchTaskRepository repo,
+                                            [FromServices] IRecurringJobManager jobs,
+                                            CreateWatchTaskRequest request) =>
             {
                 // Validation: Title, Url, TaskPrompt are required; Title max 200 chars
                 var errors = new Dictionary<string, string[]>();
@@ -90,7 +92,7 @@ namespace AiWebSiteWatchDog.API
                         {
                             var recurringId = $"WatchTask_{task.Id}";
                             var _opts = new RecurringJobOptions { TimeZone = TimeZoneInfo.Local };
-                            RecurringJob.AddOrUpdate<WatchTaskJobRunner>(recurringId, r => r.ExecuteAsync(task.Id), task.Schedule, _opts);
+                            jobs.AddOrUpdate<WatchTaskJobRunner>(recurringId, r => r.ExecuteAsync(task.Id), task.Schedule, _opts);
                         }
                         catch (Exception ex)
                         {
@@ -119,6 +121,7 @@ namespace AiWebSiteWatchDog.API
 
             app.MapPut("/tasks/{id}", async (
                 [FromServices] AiWebSiteWatchDog.Infrastructure.Persistence.WatchTaskRepository repo,
+                [FromServices] IRecurringJobManager jobs,
                 int id,
                 UpdateWatchTaskRequest updated) =>
             {
@@ -164,11 +167,11 @@ namespace AiWebSiteWatchDog.API
                         if (refreshed.Enabled && parts2.Length is 5 or 6)
                         {
                             var _opts2 = new RecurringJobOptions { TimeZone = TimeZoneInfo.Local };
-                            RecurringJob.AddOrUpdate<WatchTaskJobRunner>(recurringId, r => r.ExecuteAsync(id), refreshed.Schedule, _opts2);
+                            jobs.AddOrUpdate<WatchTaskJobRunner>(recurringId, r => r.ExecuteAsync(id), refreshed.Schedule, _opts2);
                         }
                         else
                         {
-                            RecurringJob.RemoveIfExists(recurringId);
+                            jobs.RemoveIfExists(recurringId);
                         }
                     }
                     catch (Exception ex)
@@ -191,6 +194,7 @@ namespace AiWebSiteWatchDog.API
             // Matches: /tasks/1 or /tasks/1,2,3
             app.MapDelete("/tasks/{ids:regex(^[0-9]+(,[0-9]+)*$)}", async (
                 [FromServices] AiWebSiteWatchDog.Infrastructure.Persistence.WatchTaskRepository repo,
+                [FromServices] IRecurringJobManager jobs,
                 string ids) =>
             {
                 var parsed = ids
@@ -209,7 +213,7 @@ namespace AiWebSiteWatchDog.API
 
                 foreach (var did in deletedIds)
                 {
-                    RecurringJob.RemoveIfExists($"WatchTask_{did}");
+                    jobs.RemoveIfExists($"WatchTask_{did}");
                 }
 
                 return Results.Ok(new { deletedIds, notFoundIds });
@@ -364,13 +368,14 @@ namespace AiWebSiteWatchDog.API
             app.MapGet("/health", () => Results.Ok(new { status = "Healthy" })).DisableRateLimiting();
 
             // Delete all tasks
-            app.MapDelete("/tasks", async ([FromServices] AiWebSiteWatchDog.Infrastructure.Persistence.WatchTaskRepository repo) =>
+            app.MapDelete("/tasks", async ([FromServices] AiWebSiteWatchDog.Infrastructure.Persistence.WatchTaskRepository repo,
+                                            [FromServices] IRecurringJobManager jobs) =>
             {
                 // Remove recurring jobs first using current IDs
                 var tasks = await repo.GetAllAsync();
                 foreach (var t in tasks)
                 {
-                    RecurringJob.RemoveIfExists($"WatchTask_{t.Id}");
+                    jobs.RemoveIfExists($"WatchTask_{t.Id}");
                 }
 
                 var count = await repo.DeleteAllAsync();
