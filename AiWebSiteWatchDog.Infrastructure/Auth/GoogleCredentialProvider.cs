@@ -81,72 +81,60 @@ namespace AiWebSiteWatchDog.Infrastructure.Auth
 
         public async Task<UserCredential> GetGmailAndGeminiCredentialAsync(string senderEmail, CancellationToken ct = default)
         {
-            // Resolve Google OAuth client secret from multiple sources (priority order):
-            // 1) GOOGLE_CLIENT_SECRET_JSON_FILE -> read file contents (supports Docker secrets/bind mounts)
-            // 2) GOOGLE_CLIENT_SECRET_JSON_B64 -> Base64-encoded JSON (avoids quoting issues)
-            // 3) GOOGLE_CLIENT_SECRET_JSON     -> raw JSON string
-            // Also fall back to IConfiguration for all three keys when env var not set.
+            // Headless/server-safe credential acquisition:
+            //  - Never launches a browser. Tokens must be pre-seeded via /auth/start + /auth/callback flow.
+            //  - Attempts refresh; if refresh token is missing or revoked (invalid_grant) we purge and instruct re-consent.
 
-            string? clientSecretJson = null;
+            var clientSecretJson = ResolveClientSecretJson();
+            using var secretStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(clientSecretJson));
+            var secrets = GoogleClientSecrets.FromStream(secretStream).Secrets;
 
-            // 1) File path
-            var secretFile = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET_JSON_FILE")
-                               ?? _config["GOOGLE_CLIENT_SECRET_JSON_FILE"];
-            if (!string.IsNullOrWhiteSpace(secretFile) && File.Exists(secretFile))
+            IDataStore dataStore = _useDbStore
+                ? new DbEncryptedDataStore(_dbContext, _encryptionKey!)
+                : CreateFileStore(senderEmail);
+
+            // Build flow (same scopes so a single consent covers Gmail + Gemini)
+            using var flow = new GoogleAuthorizationCodeFlow(new GoogleAuthorizationCodeFlow.Initializer
             {
-                clientSecretJson = File.ReadAllText(secretFile);
+                ClientSecrets = secrets,
+                Scopes = Scopes,
+                DataStore = dataStore
+            });
+
+            // Load stored token (created previously by ExchangeCodeForTokenAsync). If absent, instruct re-consent.
+            var token = await flow.LoadTokenAsync(senderEmail, ct);
+            if (token == null)
+            {
+                throw new InvalidOperationException("No stored Google OAuth token found for sender email. Visit /auth to (re)authorize.");
+            }
+            if (string.IsNullOrWhiteSpace(token.RefreshToken))
+            {
+                // A token without a refresh token cannot be refreshed in headless mode.
+                await dataStore.DeleteAsync<TokenResponse>(senderEmail);
+                throw new InvalidOperationException("Stored token missing refresh token. Re-authorize via /auth to obtain offline access.");
             }
 
-            // 2) Base64
-            if (string.IsNullOrWhiteSpace(clientSecretJson))
-            {
-                var secretB64 = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET_JSON_B64")
-                                ?? _config["GOOGLE_CLIENT_SECRET_JSON_B64"];
-                if (!string.IsNullOrWhiteSpace(secretB64))
-                {
-                    try
-                    {
-                        var data = Convert.FromBase64String(secretB64.Trim());
-                        clientSecretJson = System.Text.Encoding.UTF8.GetString(data);
-                    }
-                    catch (FormatException)
-                    {
-                        throw new InvalidOperationException("GOOGLE_CLIENT_SECRET_JSON_B64 must be valid Base64 of the client_secret.json contents");
-                    }
-                }
-            }
-
-            // 3) Raw JSON
-            if (string.IsNullOrWhiteSpace(clientSecretJson))
-            {
-                clientSecretJson = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET_JSON")
-                                   ?? _config["GOOGLE_CLIENT_SECRET_JSON"];
-            }
-
-            if (string.IsNullOrWhiteSpace(clientSecretJson))
-                throw new InvalidOperationException("Client secret is required. Provide GOOGLE_CLIENT_SECRET_JSON, or GOOGLE_CLIENT_SECRET_JSON_FILE, or GOOGLE_CLIENT_SECRET_JSON_B64.");
-
+            var credential = new UserCredential(flow, senderEmail, token);
             try
             {
-                using var secretStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(clientSecretJson));
-                var secrets = GoogleClientSecrets.FromStream(secretStream).Secrets;
-
-                IDataStore dataStore = _useDbStore
-                    ? new DbEncryptedDataStore(_dbContext, _encryptionKey!)
-                    : CreateFileStore(senderEmail);
-
-                string tokenPath = GetTokenPath(senderEmail);
-                Directory.CreateDirectory(tokenPath);
-
-                var credential = await GoogleWebAuthorizationBroker.AuthorizeAsync(
-                    secrets,
-                    Scopes,
-                    senderEmail,
-                    ct,
-                    dataStore
-                );
-
+                // Attempt refresh so we always return a valid access token.
+                if (credential.Token.IsStale)
+                {
+                    var refreshed = await credential.RefreshTokenAsync(ct);
+                    if (!refreshed)
+                    {
+                        await dataStore.DeleteAsync<TokenResponse>(senderEmail);
+                        throw new InvalidOperationException("Failed to refresh Google OAuth token. Re-authorize via /auth.");
+                    }
+                }
                 return credential;
+            }
+            catch (TokenResponseException tex) when (tex.Error?.Error == "invalid_grant")
+            {
+                // Refresh token has been revoked / expired => purge and require new consent.
+                await dataStore.DeleteAsync<TokenResponse>(senderEmail);
+                Log.Warning(tex, "Google refresh token invalid_grant for {SenderEmail}. Purged stored token.");
+                throw new InvalidOperationException("Google OAuth refresh token revoked or expired. Re-authorize via /auth to continue.");
             }
             catch (Exception ex)
             {
