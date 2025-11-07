@@ -94,7 +94,8 @@ namespace AiWebSiteWatchDog.Infrastructure.Auth
                 : CreateFileStore(senderEmail);
 
             // Build flow (same scopes so a single consent covers Gmail + Gemini)
-            using var flow = new GoogleAuthorizationCodeFlow(new GoogleAuthorizationCodeFlow.Initializer
+            // Note: Do not dispose the flow - UserCredential needs it for token refresh operations
+            var flow = new GoogleAuthorizationCodeFlow(new GoogleAuthorizationCodeFlow.Initializer
             {
                 ClientSecrets = secrets,
                 Scopes = Scopes,
@@ -188,7 +189,8 @@ namespace AiWebSiteWatchDog.Infrastructure.Auth
                 ? new DbEncryptedDataStore(_dbContext, _encryptionKey!)
                 : CreateFileStore(senderEmail);
 
-            using var flow = new GoogleAuthorizationCodeFlow(new GoogleAuthorizationCodeFlow.Initializer
+            // Note: Do not dispose the flow - UserCredential needs it for token refresh operations
+            var flow = new GoogleAuthorizationCodeFlow(new GoogleAuthorizationCodeFlow.Initializer
             {
                 ClientSecrets = secrets,
                 Scopes = Scopes,
