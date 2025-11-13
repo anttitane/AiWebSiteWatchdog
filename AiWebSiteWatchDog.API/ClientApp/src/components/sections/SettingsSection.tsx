@@ -34,7 +34,7 @@ export default function SettingsSection({ settings, loaded, onEditSettings, onAu
           <div className="sm:col-span-2">
             <div className="text-gray-600 dark:text-gray-300">Gemini API URL</div>
             <div className="font-mono text-xs inline-flex items-center gap-2 max-w-full">
-              <span className="truncate block max-w-[640px]">{settings.geminiApiUrl || '(default)'}</span>
+              <span className="truncate block max-w-[640px]" title={settings.geminiApiUrl || undefined}>{settings.geminiApiUrl || '(default)'}</span>
             </div>
           </div>
         </div>

@@ -19,7 +19,7 @@ export default function NotificationsSection({ notifications, onShow, onDelete }
             <li key={n.id} className="py-3 flex items-start gap-4">
               <span className="w-56 shrink-0 text-sm text-gray-600 dark:text-gray-300">{formatDateTime(n.sentAt)}</span>
               <div className="flex-1 min-w-0">
-                <div className="font-medium truncate">{n.subject}</div>
+                <div className="font-medium truncate" title={n.subject}>{n.subject}</div>
               </div>
               <div className="ml-auto flex items-center gap-2">
                 <button className="btn-secondary px-3 py-1.5" onClick={() => onShow(n)}>Show</button>
