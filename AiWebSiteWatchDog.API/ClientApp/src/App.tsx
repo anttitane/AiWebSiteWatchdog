@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { toast } from 'react-hot-toast'
 import axios from 'axios'
 import { Settings, WatchTaskFull, NotificationItem, SettingsForm, NewTaskForm, EditTaskForm } from './types'
 import SettingsModal from './components/modals/SettingsModal'
@@ -90,7 +91,11 @@ export default function App() {
   useEffect(() => {
     svcGetTasks()
       .then((data) => setTasks(data))
-      .catch((e: unknown) => setTasksError((e as Error).message || String(e)))
+      .catch((e: unknown) => {
+        const msg = (e as Error).message || String(e)
+        setTasksError(msg)
+        toast.error(`Failed to load tasks: ${msg}`)
+      })
   }, [])
 
   useEffect(() => {
@@ -103,7 +108,9 @@ export default function App() {
       const data = (list || []).slice().sort((a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime())
       setNotifications(data)
     } catch (e: unknown) {
-      setNotificationsError((e as Error).message || String(e))
+      const msg = (e as Error).message || String(e)
+      setNotificationsError(msg)
+      toast.error(`Failed to load notifications: ${msg}`)
     }
   }
 
@@ -111,6 +118,7 @@ export default function App() {
     setSaving(true)
     setSaveMsg(null)
     setError(null)
+    const toastId = toast.loading('Saving settings…')
     try {
       const payload = {
         userEmail: form.userEmail,
@@ -129,9 +137,12 @@ export default function App() {
         geminiApiUrl: latest.geminiApiUrl || ''
       })
       setSaveMsg('Settings saved')
+      toast.success('Settings saved', { id: toastId })
       return true
     } catch (e) {
-      setError(String(e))
+      const msg = String(e)
+      setError(msg)
+      toast.error(msg)
       return false
     } finally {
       setSaving(false)
@@ -144,6 +155,7 @@ export default function App() {
     setCreating(true)
     setCreateMsg(null)
     setError(null)
+    const toastId = toast.loading('Creating task…')
     try {
       const payload = {
         title: newTask.title.trim(),
@@ -154,21 +166,26 @@ export default function App() {
       }
       await svcCreateTask(payload)
       // Refresh tasks and settings summaries
-      const [t, s] = await Promise.all([
+      const [tasksList, s] = await Promise.all([
         svcGetTasks(),
         svcGetSettings().catch(() => null as any)
       ])
-      setTasks(t)
+      setTasks(tasksList)
       setSettings(s as Settings | null)
       setNewTask({ title: '', url: '', taskPrompt: '', schedule: '', enabled: true })
       setCreateMsg('Task created')
+      toast.success('Task created', { id: toastId })
       return true
     } catch (e: unknown) {
       const ax = e as any
       if (axios.isAxiosError(ax) && ax.response) {
-        setError(`Create failed: HTTP ${ax.response.status} ${JSON.stringify(ax.response.data)}`)
+        const msg = `Create failed: HTTP ${ax.response.status} ${JSON.stringify(ax.response.data)}`
+        setError(msg)
+        toast.error(msg, { id: toastId })
       } else {
-        setError((e as Error).message || String(e))
+        const msg = (e as Error).message || String(e)
+        setError(msg)
+        toast.error(msg, { id: toastId })
       }
       return false
     } finally {
@@ -200,6 +217,7 @@ export default function App() {
     setUpdating(true)
     setUpdateMsg(null)
     setError(null)
+    const toastId = toast.loading('Updating task…')
     try {
       const payload: any = {}
       if (editTask.title !== undefined) payload.title = editTask.title
@@ -218,15 +236,20 @@ export default function App() {
       setTasks(t)
       setSettings(s as Settings | null)
       setUpdateMsg('Task updated')
+      toast.success('Task updated', { id: toastId })
       setEditId(null)
       setEditTask({})
       return true
     } catch (e: unknown) {
       const ax = e as any
       if (axios.isAxiosError(ax) && ax.response) {
-        setError(`Update failed: HTTP ${ax.response.status} ${JSON.stringify(ax.response.data)}`)
+        const msg = `Update failed: HTTP ${ax.response.status} ${JSON.stringify(ax.response.data)}`
+        setError(msg)
+        toast.error(msg, { id: toastId })
       } else {
-        setError((e as Error).message || String(e))
+        const msg = (e as Error).message || String(e)
+        setError(msg)
+        toast.error(msg, { id: toastId })
       }
       return false
     } finally {
@@ -239,18 +262,24 @@ export default function App() {
     setRunningId(id)
     setRunMsg(null)
     setError(null)
+    const toastId = toast.loading('Running task…')
     try {
       await svcRunTask(id, { sendEmail: true })
       // Refresh task list to get lastChecked/lastResult updates
-      const t = await svcGetTasks()
-      setTasks(t)
+      const tasksList = await svcGetTasks()
+      setTasks(tasksList)
       setRunMsg(`Task #${id} triggered and email sent`)
+      toast.success(`Task #${id} triggered`, { id: toastId })
     } catch (e: unknown) {
       const ax = e as any
       if (axios.isAxiosError(ax) && ax.response) {
-        setError(`Run failed: HTTP ${ax.response.status} ${JSON.stringify(ax.response.data)}`)
+        const msg = `Run failed: HTTP ${ax.response.status} ${JSON.stringify(ax.response.data)}`
+        setError(msg)
+        toast.error(msg, { id: toastId })
       } else {
-        setError((e as Error).message || String(e))
+        const msg = (e as Error).message || String(e)
+        setError(msg)
+        toast.error(msg, { id: toastId })
       }
     } finally {
       setRunningId(null)
@@ -263,21 +292,27 @@ export default function App() {
     setDeletingId(id)
     setDeleteMsg(null)
     setError(null)
+    const toastId = toast.loading('Deleting task…')
     try {
       await svcDeleteTask(id)
-      const [t, s] = await Promise.all([
+      const [tasksList, s] = await Promise.all([
         svcGetTasks(),
         svcGetSettings().catch(() => null as any)
       ])
-      setTasks(t)
+      setTasks(tasksList)
       setSettings(s as Settings | null)
       setDeleteMsg(`Task #${id} deleted`)
+      toast.success(`Task #${id} deleted`, { id: toastId })
     } catch (e: unknown) {
       const ax = e as any
       if (axios.isAxiosError(ax) && ax.response) {
-        setError(`Delete failed: HTTP ${ax.response.status} ${JSON.stringify(ax.response.data)}`)
+        const msg = `Delete failed: HTTP ${ax.response.status} ${JSON.stringify(ax.response.data)}`
+        setError(msg)
+        toast.error(msg, { id: toastId })
       } else {
-        setError((e as Error).message || String(e))
+        const msg = (e as Error).message || String(e)
+        setError(msg)
+        toast.error(msg, { id: toastId })
       }
     } finally {
       setDeletingId(null)
@@ -292,66 +327,68 @@ export default function App() {
 
   async function deleteNotification(id: number) {
     if (!confirm(`Delete notification #${id}?`)) return
+    const toastId = toast.loading('Deleting notification…')
     try {
       await svcDeleteNotification(id)
       await loadNotifications()
       setNotifDeleteMsg(`Notification #${id} deleted`)
+      toast.success(`Notification #${id} deleted`, { id: toastId })
       setTimeout(() => setNotifDeleteMsg(null), 2500)
     } catch (e: unknown) {
       const ax = e as any
       if (axios.isAxiosError(ax) && ax.response) {
-        setNotificationsError(`Delete failed: HTTP ${ax.response.status} ${JSON.stringify(ax.response.data)}`)
+        const msg = `Delete failed: HTTP ${ax.response.status} ${JSON.stringify(ax.response.data)}`
+        setNotificationsError(msg)
+        toast.error(msg)
       } else {
-        setNotificationsError((e as Error).message || String(e))
+        const msg = (e as Error).message || String(e)
+        setNotificationsError(msg)
+        toast.error(msg)
       }
     }
   }
 
   return (
-    <div style={{ fontFamily: 'system-ui, sans-serif', margin: '2rem' }}>
-      <h1>AiWebSiteWatchdog</h1>
+    <div className="min-h-screen flex flex-col">
+      <header className="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+          <h1 className="text-xl font-semibold tracking-tight">AiWebSiteWatchdog</h1>
+          <div className="flex items-center space-x-4 text-sm" />
+        </div>
+      </header>
+      <main className="flex-1 max-w-7xl mx-auto w-full px-6 py-6 space-y-10">
+        {!loaded && <p className="text-gray-600 dark:text-gray-300">Loading…</p>}
 
-      {error && <p style={{ color: 'crimson' }}>{error}</p>}
-      {saveMsg && <p style={{ color: 'seagreen' }}>{saveMsg}</p>}
-      {runMsg && <p style={{ color: 'seagreen' }}>{runMsg}</p>}
-      {deleteMsg && <p style={{ color: 'seagreen' }}>{deleteMsg}</p>}
-
-      {/* Settings edit moved to modal, controlled by showSettingsModal */}
-      {!loaded ? (
-        <p>Loading…</p>
-      ) : null}
-
-      <SettingsSection
-        settings={settings}
-        loaded={loaded}
-        onEditSettings={() => setShowSettingsModal(true)}
-        onAuthorizeGoogle={() => { const email = settings?.senderEmail || ''; setAuthEmail(email); setShowAuthModal(true); }}
-      />
-
-      {settings ? (
-        <>
-          <TasksSection
-            tasks={tasks}
-            error={tasksError}
-            onNewTask={() => setShowCreateTaskModal(true)}
-            onEditTask={startEdit}
-            onRunTask={runTask}
-            onDeleteTask={deleteTask}
-            runningId={runningId}
-            deletingId={deletingId}
-            createMsg={createMsg}
+        <section className="space-y-6">
+          <SettingsSection
+            settings={settings}
+            loaded={loaded}
+            onEditSettings={() => setShowSettingsModal(true)}
+            onAuthorizeGoogle={() => { const email = settings?.senderEmail || ''; setAuthEmail(email); setShowAuthModal(true); }}
           />
 
-          <NotificationsSection
-            notifications={notifications}
-            error={notificationsError}
-            onShow={showNotification}
-            onDelete={deleteNotification}
-            deleteMsg={notifDeleteMsg}
-          />
-        </>
-      ) : null}
+          {settings && (
+            <div className="space-y-10">
+              <TasksSection
+                tasks={tasks}
+                onNewTask={() => setShowCreateTaskModal(true)}
+                onEditTask={startEdit}
+                onRunTask={runTask}
+                onDeleteTask={deleteTask}
+                runningId={runningId}
+                deletingId={deletingId}
+              />
+              <NotificationsSection
+                notifications={notifications}
+                onShow={showNotification}
+                onDelete={deleteNotification}
+              />
+            </div>
+          )}
+        </section>
+      </main>
 
+      {/* Modals */}
       <SettingsModal
         open={!!showSettingsModal}
         form={form}
@@ -360,7 +397,6 @@ export default function App() {
         onSave={saveSettings}
         onClose={() => setShowSettingsModal(false)}
       />
-
       <CreateTaskModal
         open={!!showCreateTaskModal}
         newTask={newTask}
@@ -369,7 +405,6 @@ export default function App() {
         onCreate={createTask}
         onClose={() => setShowCreateTaskModal(false)}
       />
-
       <EditTaskModal
         open={!!showEditTaskModal}
         editId={editId}
@@ -380,14 +415,12 @@ export default function App() {
         onSave={saveEdit}
         onCancel={cancelEdit}
       />
-
       <AuthModal
         open={!!showAuthModal}
         email={authEmail}
         setEmail={setAuthEmail}
         onClose={() => setShowAuthModal(false)}
       />
-
       <NotificationDetailsModal
         open={!!showNotificationModal}
         notification={currentNotification}

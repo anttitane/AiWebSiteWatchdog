@@ -3,33 +3,33 @@ import { formatDateTime } from '../../utils/format'
 
 type Props = {
   notifications: NotificationItem[] | null
-  error: string | null
   onShow: (n: NotificationItem) => void
   onDelete: (id: number) => void
-  deleteMsg?: string | null
 }
 
-export default function NotificationsSection({ notifications, error, onShow, onDelete, deleteMsg }: Props) {
+export default function NotificationsSection({ notifications, onShow, onDelete }: Props) {
   return (
-    <section>
-      <h3>Notifications</h3>
-      {error && <p style={{ color: 'crimson' }}>{error}</p>}
-      {deleteMsg && <p style={{ color: 'seagreen' }}>{deleteMsg}</p>}
+    <section className="card">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold">Notifications</h3>
+      </div>
       {notifications && notifications.length > 0 ? (
-        <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+        <ul className="divide-y divide-gray-200 dark:divide-gray-700">
           {notifications.map(n => (
-            <li key={n.id} style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-              <span style={{ minWidth: 240 }}>{formatDateTime(n.sentAt)}</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span style={{ fontWeight: 600, minWidth: 400 }}>{n.subject}</span>
-                <button onClick={() => onShow(n)}>Show</button>
-                <button onClick={() => onDelete(n.id)}>Delete</button>
+            <li key={n.id} className="py-3 flex items-start gap-4">
+              <span className="w-56 shrink-0 text-sm text-gray-600 dark:text-gray-300">{formatDateTime(n.sentAt)}</span>
+              <div className="flex-1 min-w-0">
+                <div className="font-medium truncate">{n.subject}</div>
+              </div>
+              <div className="ml-auto flex items-center gap-2">
+                <button className="btn-secondary px-3 py-1.5" onClick={() => onShow(n)}>Show</button>
+                <button className="btn-secondary px-3 py-1.5" onClick={() => onDelete(n.id)}>Delete</button>
               </div>
             </li>
           ))}
         </ul>
       ) : (
-        <p>No notifications yet.</p>
+        <p className="text-gray-600 dark:text-gray-300">No notifications yet.</p>
       )}
     </section>
   )
