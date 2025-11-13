@@ -11,6 +11,7 @@ using FluentAssertions;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Auth.OAuth2.Flows;
 using Google.Apis.Auth.OAuth2.Responses;
+using Google.Apis.Util;
 using Moq;
 using Xunit;
 
@@ -38,47 +39,42 @@ public class GeminiApiClientTests
             {
                 LastAuthHeader = request.Headers.Authorization?.ToString();
                 LastRequestBody = await request.Content!.ReadAsStringAsync(cancellationToken);
-                if (ForcePostFailure)
-                {
-                    return new HttpResponseMessage(HttpStatusCode.InternalServerError)
+                return ForcePostFailure
+                    ? new HttpResponseMessage(HttpStatusCode.InternalServerError)
                     {
                         Content = new StringContent("error")
-                    };
-                }
-                else
-                {
-                    return new HttpResponseMessage(HttpStatusCode.OK)
+                    }
+                    : new HttpResponseMessage(HttpStatusCode.OK)
                     {
                         Content = new StringContent("{\"candidates\":[]}")
                     };
-                }
             }
-
+            
             return new HttpResponseMessage(HttpStatusCode.NotFound);
         }
     }
 
     private static UserCredential CreateFakeCredential()
     {
-        var flow = new GoogleAuthorizationCodeFlow(new GoogleAuthorizationCodeFlow.Initializer
-        {
-            ClientSecrets = new ClientSecrets { ClientId = "id", ClientSecret = "secret" },
-            Scopes = ["scope"]
-        });
         var token = new TokenResponse
         {
             AccessToken = "TEST_TOKEN",
             ExpiresInSeconds = 3600,
             IssuedUtc = DateTime.UtcNow
         };
-        return new UserCredential(flow, "user", token);
+        // Use a mocked IAuthorizationCodeFlow to avoid creating a disposable GoogleAuthorizationCodeFlow in tests
+        var mockFlow = new Moq.Mock<IAuthorizationCodeFlow>(Moq.MockBehavior.Loose);
+        var clock = new Moq.Mock<IClock>();
+        clock.SetupGet(c => c.UtcNow).Returns(DateTime.UtcNow);
+        mockFlow.SetupGet(f => f.Clock).Returns(clock.Object);
+        return new UserCredential(mockFlow.Object, "user", token);
     }
 
     [Fact]
     public async Task CheckInterestAsync_SendsBearerToken_AndBuildsBodyFromSiteAndPrompt()
     {
         var handler = new TestHandler();
-        var http = new HttpClient(handler);
+        using var http = new HttpClient(handler);
         var credential = CreateFakeCredential();
 
         var credProvider = new Mock<IGoogleCredentialProvider>();
@@ -104,7 +100,7 @@ public class GeminiApiClientTests
     public async Task CheckInterestAsync_NonSuccessFromGemini_Throws()
     {
         var handler = new TestHandler { ForcePostFailure = true };
-        var http = new HttpClient(handler);
+        using var http = new HttpClient(handler);
         var credential = CreateFakeCredential();
 
         var credProvider = new Mock<IGoogleCredentialProvider>();
@@ -125,7 +121,7 @@ public class GeminiApiClientTests
     public async Task CheckInterestAsync_MissingSenderEmail_Throws()
     {
         var handler = new TestHandler();
-        var http = new HttpClient(handler);
+        using var http = new HttpClient(handler);
 
         var credProvider = new Mock<IGoogleCredentialProvider>(MockBehavior.Strict); // should not be called
 
