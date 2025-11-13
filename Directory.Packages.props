@@ -1,6 +1,10 @@
 <Project>
   <ItemGroup>
     <!-- Central package versions managed here -->
+    <PackageVersion Include="coverlet.collector" Version="6.0.4">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageVersion>
     <PackageVersion Include="Google.Apis.Auth" Version="1.72.0" />
     <PackageVersion Include="Google.Apis.Gmail.v1" Version="1.70.0.3833" />
     <PackageVersion Include="HtmlAgilityPack" Version="1.12.4" />
