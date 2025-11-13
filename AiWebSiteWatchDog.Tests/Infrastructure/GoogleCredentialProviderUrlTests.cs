@@ -21,7 +21,7 @@ public class GoogleCredentialProviderUrlTests
         {
             ["GOOGLE_CLIENT_SECRET_JSON_B64"] = b64
         };
-        var config = new ConfigurationBuilder().AddInMemoryCollection(inMemory!).Build();
+        var config = new ConfigurationBuilder().AddInMemoryCollection(inMemory).Build();
 
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
@@ -29,20 +29,25 @@ public class GoogleCredentialProviderUrlTests
         using var db = new AppDbContext(options);
 
         var tmp = System.IO.Path.Combine(System.IO.Path.GetTempPath(), Guid.NewGuid().ToString("n"));
-        Environment.SetEnvironmentVariable("GOOGLE_TOKENS_PATH", tmp);
-
-        var provider = new GoogleCredentialProvider(db, config);
-        var redirect = "https://host/auth/callback";
-        var url = provider.CreateAuthorizationUrl("sender@example.com", redirect, state: "abc");
-
-        url.Should().Contain("access_type=offline");
-        url.Should().Contain("prompt=consent");
-        url.Should().Contain("include_granted_scopes=true");
-        url.Should().Contain(Uri.EscapeDataString(redirect));
-
-        // Ensure both scopes are requested
-        url.Should().Contain("scope=");
-        url.Should().Contain(Uri.EscapeDataString("https://www.googleapis.com/auth/gmail.send"));
-        url.Should().Contain(Uri.EscapeDataString("https://www.googleapis.com/auth/generative-language.retriever"));
+        var originalGoogleTokensPath = Environment.GetEnvironmentVariable("GOOGLE_TOKENS_PATH");
+        try
+        {
+            Environment.SetEnvironmentVariable("GOOGLE_TOKENS_PATH", tmp);
+            var provider = new GoogleCredentialProvider(db, config);
+            var redirect = "https://host/auth/callback";
+            var url = provider.CreateAuthorizationUrl("sender@example.com", redirect, state: "abc");
+            url.Should().Contain("access_type=offline");
+            url.Should().Contain("prompt=consent");
+            url.Should().Contain("include_granted_scopes=true");
+            url.Should().Contain(Uri.EscapeDataString(redirect));
+            // Ensure both scopes are requested
+            url.Should().Contain("scope=");
+            url.Should().Contain(Uri.EscapeDataString("https://www.googleapis.com/auth/gmail.send"));
+            url.Should().Contain(Uri.EscapeDataString("https://www.googleapis.com/auth/generative-language.retriever"));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("GOOGLE_TOKENS_PATH", originalGoogleTokensPath);
+        }
     }
 }
