@@ -1,5 +1,6 @@
 import { NotificationItem } from '../../types'
 import { formatDateTime, formatRelative } from '../../utils/format'
+import { useLocalStorageBoolean } from '../../hooks/useLocalStorage'
 
 type Props = {
   notifications: NotificationItem[] | null
@@ -8,12 +9,23 @@ type Props = {
 }
 
 export default function NotificationsSection({ notifications, onShow, onDelete }: Props) {
+  const [collapsed, setCollapsed] = useLocalStorageBoolean('ui.notifications.collapsed', false)
   return (
     <section className="card">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold">Notifications</h3>
+      <div className={"flex items-center justify-between " + (collapsed ? 'mb-0' : 'mb-4')}>
+        <div className="flex items-center gap-2">
+          <button
+            className="btn-secondary w-8 h-8 p-0 leading-none"
+            onClick={() => setCollapsed(v => !v)}
+            aria-expanded={!collapsed}
+            title={collapsed ? 'Expand' : 'Collapse'}
+          >
+            {collapsed ? '+' : '−'}
+          </button>
+          <h3 className="text-lg font-semibold">Notifications</h3>
+        </div>
       </div>
-      {notifications && notifications.length > 0 ? (
+      {!collapsed && (notifications && notifications.length > 0 ? (
         <ul className="divide-y divide-gray-200 dark:divide-gray-700">
           {notifications.map(n => (
             <li key={n.id} className="py-3 flex items-start gap-4">
@@ -30,7 +42,7 @@ export default function NotificationsSection({ notifications, onShow, onDelete }
         </ul>
       ) : (
         <p className="text-gray-600 dark:text-gray-300">No notifications yet.</p>
-      )}
+      ))}
     </section>
   )
 }

@@ -1,4 +1,5 @@
 import { Settings } from '../../types'
+import { useLocalStorageBoolean } from '../../hooks/useLocalStorage'
 
 type Props = {
   settings: Settings | null
@@ -8,16 +9,27 @@ type Props = {
 }
 
 export default function SettingsSection({ settings, loaded, onEditSettings, onAuthorizeGoogle }: Props) {
+  const [collapsed, setCollapsed] = useLocalStorageBoolean('ui.settings.collapsed', false)
   return (
     <section className="card">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold">Settings</h2>
+      <div className={"flex items-center justify-between " + (collapsed ? 'mb-0' : 'mb-4')}>
+        <div className="flex items-center gap-2">
+          <button
+            className="btn-secondary w-8 h-8 p-0 leading-none"
+            onClick={() => setCollapsed(v => !v)}
+            aria-expanded={!collapsed}
+            title={collapsed ? 'Expand' : 'Collapse'}
+          >
+            {collapsed ? '+' : '−'}
+          </button>
+          <h2 className="text-lg font-semibold">Settings</h2>
+        </div>
         <div className="flex items-center gap-3">
           <button className="btn-secondary px-3 py-2" onClick={onAuthorizeGoogle}>Authorize Google</button>
           <button className="btn-primary px-3 py-2" onClick={onEditSettings}>Edit settings</button>
         </div>
       </div>
-      {settings ? (
+      {!collapsed && (settings ? (
         <div className="grid sm:grid-cols-2 gap-3 text-sm">
           <div>
             <div className="text-gray-600 dark:text-gray-300">User email</div>
@@ -40,7 +52,7 @@ export default function SettingsSection({ settings, loaded, onEditSettings, onAu
         </div>
       ) : loaded ? (
         <p className="text-gray-600 dark:text-gray-300">No saved settings yet. Use "Edit settings" to create them.</p>
-      ) : null}
+      ) : null)}
     </section>
   )
 }

@@ -1,6 +1,7 @@
 import { WatchTaskFull } from '../../types'
 import cronstrue from 'cronstrue'
 import { formatDateTime, formatRelative } from '../../utils/format'
+import { useLocalStorageBoolean } from '../../hooks/useLocalStorage'
 
 type Props = {
   tasks: WatchTaskFull[] | null
@@ -13,16 +14,27 @@ type Props = {
 }
 
 export default function TasksSection({ tasks, onNewTask, onEditTask, onRunTask, onDeleteTask, runningId, deletingId }: Props) {
+  const [collapsed, setCollapsed] = useLocalStorageBoolean('ui.tasks.collapsed', false)
   return (
     <section className="card">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold">Watch tasks</h3>
+      <div className={"flex items-center justify-between " + (collapsed ? 'mb-0' : 'mb-4')}>
+        <div className="flex items-center gap-2">
+          <button
+            className="btn-secondary w-8 h-8 p-0 leading-none"
+            onClick={() => setCollapsed(v => !v)}
+            aria-expanded={!collapsed}
+            title={collapsed ? 'Expand' : 'Collapse'}
+          >
+            {collapsed ? '+' : '−'}
+          </button>
+          <h3 className="text-lg font-semibold">Watch tasks</h3>
+        </div>
         <div className="flex items-center gap-3 text-sm">
           <button className="btn-primary px-3 py-2" onClick={onNewTask}>New task</button>
         </div>
       </div>
 
-      {tasks && tasks.length > 0 ? (
+      {!collapsed && (tasks && tasks.length > 0 ? (
         <ul className="divide-y divide-gray-200 dark:divide-gray-700">
           {tasks.map(t => {
             let humanCron: string | null = null
@@ -65,7 +77,7 @@ export default function TasksSection({ tasks, onNewTask, onEditTask, onRunTask, 
         </ul>
       ) : (
         <p className="text-gray-600 dark:text-gray-300">No tasks yet.</p>
-      )}
+      ))}
     </section>
   ) 
 }
