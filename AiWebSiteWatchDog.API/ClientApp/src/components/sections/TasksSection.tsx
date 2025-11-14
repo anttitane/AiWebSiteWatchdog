@@ -1,5 +1,6 @@
 import { WatchTaskFull } from '../../types'
 import cronstrue from 'cronstrue'
+import { formatDateTime, formatRelative } from '../../utils/format'
 
 type Props = {
   tasks: WatchTaskFull[] | null
@@ -45,7 +46,7 @@ export default function TasksSection({ tasks, onNewTask, onEditTask, onRunTask, 
                       </span>
                     )}
                     {t.lastChecked && (
-                      <span className="text-gray-500">last checked: {new Date(t.lastChecked).toLocaleString()}</span>
+                      <span className="text-gray-500" title={formatDateTime(t.lastChecked)}>last checked: {formatRelative(t.lastChecked)}</span>
                     )}
                   </div>
                 </div>

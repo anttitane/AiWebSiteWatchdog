@@ -1,5 +1,5 @@
 import { NotificationItem } from '../../types'
-import { formatDateTime } from '../../utils/format'
+import { formatDateTime, formatRelative } from '../../utils/format'
 
 type Props = {
   notifications: NotificationItem[] | null
@@ -17,7 +17,7 @@ export default function NotificationsSection({ notifications, onShow, onDelete }
         <ul className="divide-y divide-gray-200 dark:divide-gray-700">
           {notifications.map(n => (
             <li key={n.id} className="py-3 flex items-start gap-4">
-              <span className="w-56 shrink-0 text-sm text-gray-600 dark:text-gray-300">{formatDateTime(n.sentAt)}</span>
+              <span className="w-40 shrink-0 text-sm text-gray-600 dark:text-gray-300" title={formatDateTime(n.sentAt)}>{formatRelative(n.sentAt)}</span>
               <div className="flex-1 min-w-0">
                 <div className="font-medium truncate" title={n.subject}>{n.subject}</div>
               </div>
