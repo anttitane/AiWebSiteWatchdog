@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'react-hot-toast'
+import ConfirmDialog from './components/modals/ConfirmDialog'
+import { useRef } from 'react'
 import axios from 'axios'
 import { Settings, WatchTaskFull, NotificationItem, SettingsForm, NewTaskForm, EditTaskForm } from './types'
 import SettingsModal from './components/modals/SettingsModal'
@@ -61,6 +63,31 @@ export default function App() {
   const [deletingId, setDeletingId] = useState<number | null>(null)
   const [runMsg, setRunMsg] = useState<string | null>(null)
   const [deleteMsg, setDeleteMsg] = useState<string | null>(null)
+
+  // Confirm dialog state
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [confirmTitle, setConfirmTitle] = useState<string>('Are you sure?')
+  const [confirmMessage, setConfirmMessage] = useState<string>('This action cannot be undone.')
+  const [confirmConfirmText, setConfirmConfirmText] = useState<string>('Confirm')
+  const [confirmCancelText, setConfirmCancelText] = useState<string>('Cancel')
+  const confirmResolver = useRef<((v: boolean) => void) | null>(null)
+
+  function openConfirm(opts: { title?: string; message?: string; confirmText?: string; cancelText?: string }): Promise<boolean> {
+    setConfirmTitle(opts.title ?? 'Are you sure?')
+    setConfirmMessage(opts.message ?? 'This action cannot be undone.')
+    setConfirmConfirmText(opts.confirmText ?? 'Confirm')
+    setConfirmCancelText(opts.cancelText ?? 'Cancel')
+    setConfirmOpen(true)
+    return new Promise<boolean>((resolve) => {
+      confirmResolver.current = resolve
+    })
+  }
+  function handleConfirm(result: boolean) {
+    setConfirmOpen(false)
+    const r = confirmResolver.current
+    confirmResolver.current = null
+    if (r) r(result)
+  }
 
   useEffect(() => {
     svcGetSettings()
@@ -288,7 +315,13 @@ export default function App() {
   }
 
   async function deleteTask(id: number) {
-    if (!confirm(`Delete task #${id}? This cannot be undone.`)) return
+    const ok = await openConfirm({
+      title: `Delete task #${id}?`,
+      message: 'This cannot be undone.',
+      confirmText: 'Delete',
+      cancelText: 'Cancel'
+    })
+    if (!ok) return
     setDeletingId(id)
     setDeleteMsg(null)
     setError(null)
@@ -326,7 +359,13 @@ export default function App() {
   }
 
   async function deleteNotification(id: number) {
-    if (!confirm(`Delete notification #${id}?`)) return
+    const ok = await openConfirm({
+      title: `Delete notification #${id}?`,
+      message: 'This cannot be undone.',
+      confirmText: 'Delete',
+      cancelText: 'Cancel'
+    })
+    if (!ok) return
     const toastId = toast.loading('Deleting notification…')
     try {
       await svcDeleteNotification(id)
@@ -425,6 +464,16 @@ export default function App() {
         open={!!showNotificationModal}
         notification={currentNotification}
         onClose={() => setShowNotificationModal(false)}
+      />
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title={confirmTitle}
+        message={confirmMessage}
+        confirmText={confirmConfirmText}
+        cancelText={confirmCancelText}
+        onConfirm={() => handleConfirm(true)}
+        onCancel={() => handleConfirm(false)}
       />
     </div>
   )

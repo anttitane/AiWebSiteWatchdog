@@ -1,4 +1,5 @@
 import { NewTaskForm } from '../../types'
+import { useModalAnimation } from '../../hooks/useModalAnimation'
 
 type Props = {
   open: boolean
@@ -10,65 +11,69 @@ type Props = {
 }
 
 export default function CreateTaskModal({ open, newTask, setNewTask, creating, onCreate, onClose }: Props) {
-  if (!open) return null
+  const { mounted, leaving } = useModalAnimation(open)
+  if (!mounted) return null
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-      <div style={{ background: '#fff', padding: 16, borderRadius: 8, width: 'min(720px, 95vw)' }}>
-        <h3>Create new task</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8 }}>
-          <label>
-            Title
-            <input
-              type="text"
-              value={newTask.title}
-              onChange={e => setNewTask(s => ({ ...s, title: e.target.value }))}
-              placeholder="Describe what to check"
-                style={{ width: '100%', padding: '.5rem', marginTop: 4, boxSizing: 'border-box' }}
-            />
-          </label>
-          <label>
-            URL (remember to include https:// or http://)
-            <input
-              type="url"
-              value={newTask.url}
-              onChange={e => setNewTask(s => ({ ...s, url: e.target.value }))}
-              placeholder="https://example.com"
-                style={{ width: '100%', padding: '.5rem', marginTop: 4, boxSizing: 'border-box' }}
-            />
-          </label>
-          <label>
-            Task prompt
-            <textarea
-              value={newTask.taskPrompt}
-              onChange={e => setNewTask(s => ({ ...s, taskPrompt: e.target.value }))}
-              placeholder="Explain what AI should look from the page"
-              rows={3}
-                style={{ width: '100%', padding: '.5rem', marginTop: 4, boxSizing: 'border-box' }}
-            />
-          </label>
-          <label>
-            Schedule (cron, 5 or 6 fields)
-            <input
-              type="text"
-              value={newTask.schedule}
-              onChange={e => setNewTask(s => ({ ...s, schedule: e.target.value }))}
-              placeholder="*/15 * * * *"
-                style={{ width: '100%', padding: '.5rem', marginTop: 4, boxSizing: 'border-box' }}
-            />
-          </label>
-          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-            <input
-              type="checkbox"
-              checked={newTask.enabled}
-              onChange={e => setNewTask(s => ({ ...s, enabled: e.target.checked }))}
-            />
-            Task enabled
-          </label>
-          <div>
-            <button onClick={async () => { const ok = await onCreate(); if (ok) onClose(); }} disabled={creating}>
-              {creating ? 'Creating…' : 'Create task'}
-            </button>
-            <button onClick={onClose} style={{ marginLeft: 8 }} disabled={creating}>Cancel</button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className={"absolute inset-0 bg-black/40 " + (leaving ? 'modal-anim-overlay-out' : 'modal-anim-overlay')} onClick={onClose} />
+      <div className="relative z-10 w-full max-w-3xl mx-auto">
+        <div className={("bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-6 ") + (leaving ? 'modal-anim-panel-out' : 'modal-anim-panel')}>
+          <h3 className="text-lg font-semibold mb-4">Create new task</h3>
+          <div className="grid grid-cols-1 gap-4">
+            <label className="text-sm">
+              <span className="text-gray-700 dark:text-gray-200">Title</span>
+              <input
+                className="modal-input"
+                type="text"
+                value={newTask.title}
+                onChange={e => setNewTask(s => ({ ...s, title: e.target.value }))}
+                placeholder="Describe what to check"
+              />
+            </label>
+            <label className="text-sm">
+              <span className="text-gray-700 dark:text-gray-200">URL (remember to include https:// or http://)</span>
+              <input
+                className="modal-input"
+                type="url"
+                value={newTask.url}
+                onChange={e => setNewTask(s => ({ ...s, url: e.target.value }))}
+                placeholder="https://example.com"
+              />
+            </label>
+            <label className="text-sm">
+              <span className="text-gray-700 dark:text-gray-200">Task prompt</span>
+              <textarea
+                className="modal-input"
+                value={newTask.taskPrompt}
+                onChange={e => setNewTask(s => ({ ...s, taskPrompt: e.target.value }))}
+                placeholder="Explain what AI should look from the page"
+                rows={3}
+              />
+            </label>
+            <label className="text-sm">
+              <span className="text-gray-700 dark:text-gray-200">Schedule (cron, 5 or 6 fields)</span>
+              <input
+                className="modal-input font-mono text-xs"
+                type="text"
+                value={newTask.schedule}
+                onChange={e => setNewTask(s => ({ ...s, schedule: e.target.value }))}
+                placeholder="*/15 * * * *"
+              />
+            </label>
+            <label className="inline-flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={newTask.enabled}
+                onChange={e => setNewTask(s => ({ ...s, enabled: e.target.checked }))}
+              />
+              Task enabled
+            </label>
+            <div className="flex justify-end gap-3 pt-2">
+              <button className="btn-secondary px-3 py-2" onClick={onClose} disabled={creating}>Cancel</button>
+              <button className="btn-primary px-3 py-2" onClick={async () => { const ok = await onCreate(); if (ok) onClose(); }} disabled={creating}>
+                {creating ? 'Creating…' : 'Create task'}
+              </button>
+            </div>
           </div>
         </div>
       </div>
