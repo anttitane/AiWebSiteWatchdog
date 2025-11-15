@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useLocalStorageString } from './hooks/useLocalStorage'
 import { toast } from 'react-hot-toast'
 import ConfirmDialog from './components/modals/ConfirmDialog'
 import { useRef } from 'react'
@@ -17,6 +18,7 @@ import { getTasks as svcGetTasks, createTask as svcCreateTask, updateTask as svc
 import { getNotifications as svcGetNotifications, deleteNotification as svcDeleteNotification } from './services/notifications'
 
 export default function App() {
+  const [activeTab, setActiveTab] = useLocalStorageString<'dashboard' | 'tasks' | 'notifications' | 'settings'>('ui.activeTab', 'dashboard')
   const [settings, setSettings] = useState<Settings | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loaded, setLoaded] = useState(false)
@@ -390,41 +392,95 @@ export default function App() {
   return (
     <div className="min-h-screen flex flex-col">
       <header className="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <h1 className="text-xl font-semibold tracking-tight">AiWebSiteWatchdog</h1>
-          <div className="flex items-center space-x-4 text-sm" />
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <h1 className="text-xl font-semibold tracking-tight">AiWebSiteWatchdog</h1>
+            <nav aria-label="Primary" className="hidden sm:block">
+              <ul className="flex items-center gap-1">
+                {[
+                  { key: 'dashboard', label: 'Dashboard' },
+                  { key: 'tasks', label: 'Tasks' },
+                  { key: 'notifications', label: 'Notifications' },
+                  { key: 'settings', label: 'Settings' }
+                ].map(t => (
+                  <li key={t.key}>
+                    <button
+                      onClick={() => setActiveTab(t.key as any)}
+                      className={"px-3 py-2 rounded-md text-sm font-medium transition-colors " + (activeTab === t.key
+                        ? 'bg-indigo-600 text-white dark:bg-indigo-500'
+                        : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700')}
+                      aria-current={activeTab === t.key ? 'page' : undefined}
+                    >
+                      {t.label}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          </div>
+          {/* Mobile nav */}
+          <nav aria-label="Primary" className="sm:hidden mt-4">
+            <ul className="grid grid-cols-2 gap-2">
+              {[
+                { key: 'dashboard', label: 'Dashboard' },
+                { key: 'tasks', label: 'Tasks' },
+                { key: 'notifications', label: 'Notifications' },
+                { key: 'settings', label: 'Settings' }
+              ].map(t => (
+                <li key={t.key}>
+                  <button
+                    onClick={() => setActiveTab(t.key as any)}
+                    className={"w-full px-3 py-2 rounded-md text-sm font-medium transition-colors " + (activeTab === t.key
+                      ? 'bg-indigo-600 text-white dark:bg-indigo-500'
+                      : 'text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700')}
+                    aria-current={activeTab === t.key ? 'page' : undefined}
+                  >
+                    {t.label}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </nav>
         </div>
       </header>
-      <main className="flex-1 max-w-7xl mx-auto w-full px-6 py-6 space-y-10">
+      <main className="flex-1 max-w-7xl mx-auto w-full px-6 py-6 space-y-6">
         {!loaded && <p className="text-gray-600 dark:text-gray-300">Loading…</p>}
 
-        <section className="space-y-6">
+        {activeTab === 'dashboard' && (
+          <div className="card">
+            <h2 className="text-lg font-semibold mb-2">Dashboard</h2>
+            <p className="text-sm text-gray-600 dark:text-gray-300">Dashboard content coming soon.</p>
+          </div>
+        )}
+
+        {activeTab === 'settings' && (
           <SettingsSection
             settings={settings}
             loaded={loaded}
             onEditSettings={() => setShowSettingsModal(true)}
             onAuthorizeGoogle={() => { const email = settings?.senderEmail || ''; setAuthEmail(email); setShowAuthModal(true); }}
           />
+        )}
 
-          {settings && (
-            <div className="space-y-10">
-              <TasksSection
-                tasks={tasks}
-                onNewTask={() => setShowCreateTaskModal(true)}
-                onEditTask={startEdit}
-                onRunTask={runTask}
-                onDeleteTask={deleteTask}
-                runningId={runningId}
-                deletingId={deletingId}
-              />
-              <NotificationsSection
-                notifications={notifications}
-                onShow={showNotification}
-                onDelete={deleteNotification}
-              />
-            </div>
-          )}
-        </section>
+        {activeTab === 'tasks' && (
+          <TasksSection
+            tasks={tasks}
+            onNewTask={() => setShowCreateTaskModal(true)}
+            onEditTask={startEdit}
+            onRunTask={runTask}
+            onDeleteTask={deleteTask}
+            runningId={runningId}
+            deletingId={deletingId}
+          />
+        )}
+
+        {activeTab === 'notifications' && (
+          <NotificationsSection
+            notifications={notifications}
+            onShow={showNotification}
+            onDelete={deleteNotification}
+          />
+        )}
       </main>
 
       {/* Modals */}

@@ -23,3 +23,21 @@ export function useLocalStorageBoolean(key: string, defaultValue = false) {
 
   return [value, setValue] as const
 }
+
+export function useLocalStorageString<T extends string>(key: string, defaultValue: T) {
+  const [value, setValue] = useState<T>(() => {
+    try {
+      const raw = localStorage.getItem(key)
+      if (raw !== null) return raw as T
+    } catch {}
+    return defaultValue
+  })
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(key, value)
+    } catch {}
+  }, [key, value])
+
+  return [value, setValue] as const
+}
