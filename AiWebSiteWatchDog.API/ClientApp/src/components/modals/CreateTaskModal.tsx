@@ -1,5 +1,6 @@
 import { NewTaskForm } from '../../types'
 import { useModalAnimation } from '../../hooks/useModalAnimation'
+import ScheduleEditor from '../scheduling/ScheduleEditor'
 
 type Props = {
   open: boolean
@@ -50,16 +51,15 @@ export default function CreateTaskModal({ open, newTask, setNewTask, creating, o
                 rows={3}
               />
             </label>
-            <label className="text-sm">
-              <span className="text-gray-700 dark:text-gray-200">Schedule (cron, 5 or 6 fields)</span>
-              <input
-                className="modal-input font-mono text-xs"
-                type="text"
-                value={newTask.schedule}
-                onChange={e => setNewTask(s => ({ ...s, schedule: e.target.value }))}
-                placeholder="*/15 * * * *"
-              />
-            </label>
+            <div className="text-sm">
+              <span className="text-gray-700 dark:text-gray-200">Schedule</span>
+              <div className="mt-1">
+                <ScheduleEditor
+                  value={newTask.schedule}
+                  onChange={(cron) => setNewTask(s => ({ ...s, schedule: cron }))}
+                />
+              </div>
+            </div>
             <label className="inline-flex items-center gap-2 text-sm">
               <input
                 type="checkbox"

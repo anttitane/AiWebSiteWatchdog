@@ -1,5 +1,6 @@
 import { EditTaskForm } from '../../types'
 import { useModalAnimation } from '../../hooks/useModalAnimation'
+import ScheduleEditor from '../scheduling/ScheduleEditor'
 
 type Props = {
   open: boolean
@@ -49,15 +50,15 @@ export default function EditTaskModal({ open, editId, editTask, setEditTask, upd
                 rows={3}
               />
             </label>
-            <label className="text-sm">
+            <div className="text-sm">
               <span className="text-gray-700 dark:text-gray-200">Schedule</span>
-              <input
-                className="modal-input font-mono text-xs"
-                type="text"
-                value={editTask.schedule ?? ''}
-                onChange={e => setEditTask(s => ({ ...s, schedule: e.target.value }))}
-              />
-            </label>
+              <div className="mt-1">
+                <ScheduleEditor
+                  value={editTask.schedule}
+                  onChange={(cron) => setEditTask(s => ({ ...s, schedule: cron }))}
+                />
+              </div>
+            </div>
             <label className="inline-flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
