@@ -13,6 +13,7 @@ import NotificationDetailsModal from './components/modals/NotificationDetailsMod
 import SettingsSection from './components/sections/SettingsSection'
 import TasksSection from './components/sections/TasksSection'
 import NotificationsSection from './components/sections/NotificationsSection'
+import DashboardSection from './components/sections/DashboardSection'
 import { getSettings as svcGetSettings, updateSettings as svcUpdateSettings } from './services/settings'
 import { getTasks as svcGetTasks, createTask as svcCreateTask, updateTask as svcUpdateTask, runTask as svcRunTask, deleteTask as svcDeleteTask } from './services/tasks'
 import { getNotifications as svcGetNotifications, deleteNotification as svcDeleteNotification } from './services/notifications'
@@ -447,10 +448,12 @@ export default function App() {
         {!loaded && <p className="text-gray-600 dark:text-gray-300">Loading…</p>}
 
         {activeTab === 'dashboard' && (
-          <div className="card">
-            <h2 className="text-lg font-semibold mb-2">Dashboard</h2>
-            <p className="text-sm text-gray-600 dark:text-gray-300">Dashboard content coming soon.</p>
-          </div>
+          <DashboardSection
+            settings={settings}
+            tasks={tasks}
+            notifications={notifications}
+            loaded={loaded}
+          />
         )}
 
         {activeTab === 'settings' && (
