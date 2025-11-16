@@ -5,10 +5,10 @@ import ConfirmDialog from './components/modals/ConfirmDialog'
 import { useRef } from 'react'
 import axios from 'axios'
 import { Settings, WatchTaskFull, NotificationItem, SettingsForm, NewTaskForm, EditTaskForm } from './types'
-import SettingsModal from './components/modals/SettingsModal'
 import CreateTaskModal from './components/modals/CreateTaskModal'
 import EditTaskModal from './components/modals/EditTaskModal'
-import AuthModal from './components/modals/AuthModal'
+// Removed AuthModal (replaced by inline AuthCard)
+import AuthCard from './components/sections/AuthCard'
 import NotificationDetailsModal from './components/modals/NotificationDetailsModal'
 import SettingsSection from './components/sections/SettingsSection'
 import TasksSection from './components/sections/TasksSection'
@@ -40,9 +40,7 @@ export default function App() {
   })
   const [saving, setSaving] = useState(false)
   const [saveMsg, setSaveMsg] = useState<string | null>(null)
-  const [showSettingsModal, setShowSettingsModal] = useState(false)
-  const [showAuthModal, setShowAuthModal] = useState(false)
-  const [authEmail, setAuthEmail] = useState('')
+  // Auth now inline via AuthCard
 
   // Create task form state
   const [newTask, setNewTask] = useState<NewTaskForm>({
@@ -457,12 +455,17 @@ export default function App() {
         )}
 
         {activeTab === 'settings' && (
-          <SettingsSection
-            settings={settings}
-            loaded={loaded}
-            onEditSettings={() => setShowSettingsModal(true)}
-            onAuthorizeGoogle={() => { const email = settings?.senderEmail || ''; setAuthEmail(email); setShowAuthModal(true); }}
-          />
+          <>
+            <SettingsSection
+              settings={settings}
+              loaded={loaded}
+              form={form}
+              setForm={setForm}
+              saving={saving}
+              onSave={saveSettings}
+            />
+            <AuthCard settings={settings} />
+          </>
         )}
 
         {activeTab === 'tasks' && (
@@ -487,14 +490,6 @@ export default function App() {
       </main>
 
       {/* Modals */}
-      <SettingsModal
-        open={!!showSettingsModal}
-        form={form}
-        setForm={setForm}
-        saving={saving}
-        onSave={saveSettings}
-        onClose={() => setShowSettingsModal(false)}
-      />
       <CreateTaskModal
         open={!!showCreateTaskModal}
         newTask={newTask}
@@ -512,12 +507,6 @@ export default function App() {
         updateMsg={updateMsg}
         onSave={saveEdit}
         onCancel={cancelEdit}
-      />
-      <AuthModal
-        open={!!showAuthModal}
-        email={authEmail}
-        setEmail={setAuthEmail}
-        onClose={() => setShowAuthModal(false)}
       />
       <NotificationDetailsModal
         open={!!showNotificationModal}
