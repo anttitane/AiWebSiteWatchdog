@@ -37,7 +37,7 @@ export default function TasksSection({ tasks, onNewTask, onEditTask, onRunTask, 
                   <div className="font-medium leading-6">
                     {t.title}
                   </div>
-                  <div className="text-xs font-mono text-gray-600 dark:text-gray-300 truncate max-w-[680px]" title={t.url}>{t.url}</div>
+                  <div className="text-xs font-mono text-gray-600 dark:text-gray-300 truncate max-w-full sm:max-w-[680px]" title={t.url}>{t.url}</div>
                   <div className="mt-1 flex items-center gap-2 text-xs">
                     <span className={"badge " + (t.enabled ? 'badge-success' : 'badge-error')}>{t.enabled ? 'Enabled' : 'Disabled'}</span>
                     {t.schedule && (
@@ -50,12 +50,12 @@ export default function TasksSection({ tasks, onNewTask, onEditTask, onRunTask, 
                     )}
                   </div>
                 </div>
-                <div className="ml-auto flex items-center gap-2">
-                  <button className="btn-secondary px-3 py-1.5" onClick={() => onEditTask(t)}>Edit</button>
-                  <button className="btn-secondary px-3 py-1.5" onClick={() => onRunTask(t.id)} disabled={runningId === t.id}>
+                <div className="sm:ml-auto ml-0 w-full sm:w-auto flex items-stretch sm:items-center gap-2 mt-3 sm:mt-0">
+                  <button className="btn-secondary px-3 py-1.5 sm:flex-none flex-1" onClick={() => onEditTask(t)}>Edit</button>
+                  <button className="btn-secondary px-3 py-1.5 sm:flex-none flex-1" onClick={() => onRunTask(t.id)} disabled={runningId === t.id}>
                     {runningId === t.id ? 'Running…' : 'Run now'}
                   </button>
-                  <button className="btn-secondary px-3 py-1.5" onClick={() => onDeleteTask(t.id)} disabled={deletingId === t.id}>
+                  <button className="btn-secondary px-3 py-1.5 sm:flex-none flex-1" onClick={() => onDeleteTask(t.id)} disabled={deletingId === t.id}>
                     {deletingId === t.id ? 'Deleting…' : 'Delete'}
                   </button>
                 </div>

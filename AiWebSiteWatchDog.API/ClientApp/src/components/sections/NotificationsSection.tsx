@@ -54,9 +54,9 @@ export default function NotificationsSection({ notifications, onDelete }: Props)
             const isOpen = !!expanded[n.id]
             return (
               <li key={n.id} className="py-3">
-                <div className="flex items-start gap-4">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-start gap-3 sm:gap-4">
                   <button
-                    className="btn-secondary w-8 h-8 p-0"
+                    className="btn-secondary w-8 h-8 p-0 shrink-0"
                     onClick={() => toggle(n.id)}
                     aria-expanded={isOpen}
                     aria-label={isOpen ? 'Collapse notification' : 'Expand notification'}
@@ -66,17 +66,17 @@ export default function NotificationsSection({ notifications, onDelete }: Props)
                       <path fillRule="evenodd" d="M12 15.75a.75.75 0 01-.53-.22l-6-6a.75.75 0 111.06-1.06L12 13.44l5.47-5.47a.75.75 0 111.06 1.06l-6 6a.75.75 0 01-.53.22z" clipRule="evenodd" />
                     </svg>
                   </button>
-                  <span className="w-40 shrink-0 text-sm text-gray-600 dark:text-gray-300" title={formatDateTime(n.sentAt)}>{formatRelative(n.sentAt)}</span>
+                  <span className="sm:w-40 w-full shrink-0 text-xs sm:text-sm text-gray-600 dark:text-gray-300" title={formatDateTime(n.sentAt)}>{formatRelative(n.sentAt)}</span>
                   <div className="flex-1 min-w-0">
                     <div className="font-medium truncate" title={n.subject}>{n.subject}</div>
                     {isOpen && (
                       <div className="mt-2 text-xs">
                         <div className="text-gray-600 dark:text-gray-300">{formatDateTime(n.sentAt)}</div>
-                        <pre className="mt-2 whitespace-pre-wrap break-words bg-gray-50 dark:bg-gray-900/40 p-3 rounded-md max-h-[40vh] overflow-auto" title={n.message}>{n.message}</pre>
+                        <pre className="mt-2 whitespace-pre-wrap break-words bg-gray-50 dark:bg-gray-900/40 p-3 rounded-md max-h-[40vh] overflow-auto max-w-full" title={n.message}>{n.message}</pre>
                       </div>
                     )}
                   </div>
-                  <div className="ml-auto flex items-center gap-2">
+                  <div className="sm:ml-auto ml-0 flex items-center gap-2 sm:self-auto self-start mt-2 sm:mt-0">
                     <button className="btn-secondary px-3 py-1.5" onClick={() => onDelete(n.id)}>Delete</button>
                   </div>
                 </div>
