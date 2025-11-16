@@ -1,6 +1,7 @@
 import { EditTaskForm } from '../../types'
 import { useModalAnimation } from '../../hooks/useModalAnimation'
 import ScheduleEditor from '../scheduling/ScheduleEditor'
+import { useState } from 'react'
 
 type Props = {
   open: boolean
@@ -15,6 +16,7 @@ type Props = {
 
 export default function EditTaskModal({ open, editId, editTask, setEditTask, updating, updateMsg, onSave, onCancel }: Props) {
   const { mounted, leaving } = useModalAnimation(open)
+  const [scheduleValid, setScheduleValid] = useState(true)
   if (!mounted) return null
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -56,6 +58,7 @@ export default function EditTaskModal({ open, editId, editTask, setEditTask, upd
                 <ScheduleEditor
                   value={editTask.schedule}
                   onChange={(cron) => setEditTask(s => ({ ...s, schedule: cron }))}
+                  onValidityChange={setScheduleValid}
                 />
               </div>
             </div>
@@ -69,7 +72,7 @@ export default function EditTaskModal({ open, editId, editTask, setEditTask, upd
             </label>
             <div className="flex justify-end gap-3 pt-2">
               <button className="btn-secondary px-3 py-2" onClick={onCancel} disabled={updating}>Cancel</button>
-              <button className="btn-primary px-3 py-2" onClick={async () => { const ok = await onSave(editId); if (ok) onCancel(); }} disabled={updating}>
+              <button className="btn-primary px-3 py-2" onClick={async () => { if (editId == null) return; const ok = await onSave(editId); if (ok) onCancel(); }} disabled={updating || !scheduleValid || editId == null}>
                 {updating ? 'Saving…' : 'Save'}
               </button>
             </div>

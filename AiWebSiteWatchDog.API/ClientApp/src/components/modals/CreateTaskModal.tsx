@@ -1,6 +1,7 @@
 import { NewTaskForm } from '../../types'
 import { useModalAnimation } from '../../hooks/useModalAnimation'
 import ScheduleEditor from '../scheduling/ScheduleEditor'
+import { useState } from 'react'
 
 type Props = {
   open: boolean
@@ -13,6 +14,7 @@ type Props = {
 
 export default function CreateTaskModal({ open, newTask, setNewTask, creating, onCreate, onClose }: Props) {
   const { mounted, leaving } = useModalAnimation(open)
+  const [scheduleValid, setScheduleValid] = useState(true)
   if (!mounted) return null
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -57,6 +59,7 @@ export default function CreateTaskModal({ open, newTask, setNewTask, creating, o
                 <ScheduleEditor
                   value={newTask.schedule}
                   onChange={(cron) => setNewTask(s => ({ ...s, schedule: cron }))}
+                  onValidityChange={setScheduleValid}
                 />
               </div>
             </div>
@@ -70,7 +73,7 @@ export default function CreateTaskModal({ open, newTask, setNewTask, creating, o
             </label>
             <div className="flex justify-end gap-3 pt-2">
               <button className="btn-secondary px-3 py-2" onClick={onClose} disabled={creating}>Cancel</button>
-              <button className="btn-primary px-3 py-2" onClick={async () => { const ok = await onCreate(); if (ok) onClose(); }} disabled={creating}>
+              <button className="btn-primary px-3 py-2" onClick={async () => { const ok = await onCreate(); if (ok) onClose(); }} disabled={creating || !scheduleValid}>
                 {creating ? 'Creating…' : 'Create task'}
               </button>
             </div>

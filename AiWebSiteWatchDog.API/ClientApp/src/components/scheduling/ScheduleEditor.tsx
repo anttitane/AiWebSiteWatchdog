@@ -7,9 +7,10 @@ export type ScheduleKind = 'every-n-minutes' | 'every-n-hours' | 'daily' | 'week
 type Props = {
   value: string | undefined
   onChange: (cron: string) => void
+  onValidityChange?: (valid: boolean) => void
 }
 
-export default function ScheduleEditor({ value, onChange }: Props) {
+export default function ScheduleEditor({ value, onChange, onValidityChange }: Props) {
   const parsed = useMemo(() => parseSimpleFromCron(value || ''), [value])
   const [mode, setMode] = useState<'simple' | 'advanced'>(() => (parsed ? 'simple' : (value ? 'advanced' : 'simple')))
   const [kind, setKind] = useState<ScheduleKind>(() => parsed?.kind ?? 'every-n-minutes')
@@ -54,6 +55,23 @@ export default function ScheduleEditor({ value, onChange }: Props) {
     const nd = getNextRunDate(cron)
     return nd ? nd.toISOString() : null
   }, [value])
+
+  const advancedInvalid = useMemo(() => {
+    if (mode !== 'advanced') return false
+    const v = (value || '').trim()
+    if (!v) return false
+    return getNextRunDate(v) === null
+  }, [mode, value])
+
+  const isValid = useMemo(() => {
+    return mode === 'simple' || !advancedInvalid
+  }, [mode, advancedInvalid])
+
+  useEffect(() => {
+    if (typeof onValidityChange === 'function') {
+      onValidityChange(isValid)
+    }
+  }, [isValid, onValidityChange])
 
   function toggleDow(d: number) {
     setDaysOfWeek(prev => prev.includes(d) ? prev.filter(x => x!==d) : [...prev, d])
@@ -147,16 +165,28 @@ export default function ScheduleEditor({ value, onChange }: Props) {
           )}
         </div>
       ) : (
-        <label className="text-sm block">
-          <span className="text-gray-700 dark:text-gray-200">Cron expression</span>
-          <input className="modal-input font-mono text-xs" type="text" value={value || ''} onChange={e=>onChange(e.target.value)} placeholder="*/15 * * * *" />
-        </label>
+        <div className="text-sm">
+          <label className="block">
+            <span className="text-gray-700 dark:text-gray-200">Cron expression</span>
+            <input
+              className={("modal-input font-mono text-xs ") + (advancedInvalid ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : '')}
+              type="text"
+              value={value || ''}
+              onChange={e=>onChange(e.target.value)}
+              placeholder="*/15 * * * *"
+              aria-invalid={advancedInvalid || undefined}
+            />
+          </label>
+          {advancedInvalid && (
+            <p className="mt-1 text-xs text-red-600 dark:text-red-400">Invalid cron expression. Use 5 fields (min hour day month dow) or switch to Simple.</p>
+          )}
+        </div>
       )}
 
       <div className="text-xs text-gray-600 dark:text-gray-300">
         <div>Result: <span className="font-mono">{value || ''}</span></div>
         <div>Description: {human}</div>
-        <div>Next run: {nextRun ? new Date(nextRun).toLocaleString() : 'n/a'}</div>
+        <div>Next run: {nextRun ? new Date(nextRun).toLocaleString() : (mode==='advanced' && advancedInvalid ? 'invalid' : 'n/a')}</div>
       </div>
     </div>
   )
