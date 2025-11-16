@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import cronstrue from 'cronstrue'
 import { getNextRunDate } from '../../utils/scheduling'
+import { formatDateTime } from '../../utils/format'
 
 export type ScheduleKind = 'every-n-minutes' | 'every-n-hours' | 'daily' | 'weekly' | 'monthly'
 
@@ -186,7 +187,7 @@ export default function ScheduleEditor({ value, onChange, onValidityChange }: Pr
       <div className="text-xs text-gray-600 dark:text-gray-300">
         <div>Result: <span className="font-mono">{value || ''}</span></div>
         <div>Description: {human}</div>
-        <div>Next run: {nextRun ? new Date(nextRun).toLocaleString() : (mode==='advanced' && advancedInvalid ? 'invalid' : 'n/a')}</div>
+        <div>Next run: {nextRun ? formatDateTime(nextRun) : (mode==='advanced' && advancedInvalid ? 'invalid' : 'n/a')}</div>
       </div>
     </div>
   )
