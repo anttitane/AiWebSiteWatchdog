@@ -1,5 +1,4 @@
 import { Settings, SettingsForm } from '../../types'
-import { useLocalStorageBoolean } from '../../hooks/useLocalStorage'
 import { useState, useEffect, useMemo } from 'react'
 
 type Props = {
@@ -12,7 +11,6 @@ type Props = {
 }
 
 export default function SettingsSection({ settings, loaded, form, setForm, saving, onSave }: Props) {
-  const [collapsed, setCollapsed] = useLocalStorageBoolean('ui.settings.collapsed', false)
   const [editing, setEditing] = useState(false)
   const [original, setOriginal] = useState<SettingsForm | null>(null)
 
@@ -70,18 +68,8 @@ export default function SettingsSection({ settings, loaded, form, setForm, savin
   }, [editing, original, form])
   return (
     <section className="card">
-      <div className={"flex items-center justify-between " + (collapsed ? 'mb-0' : 'mb-4')}>
-        <div className="flex items-center gap-2">
-          <button
-            className="btn-secondary w-8 h-8 p-0 leading-none"
-            onClick={() => setCollapsed(v => !v)}
-            aria-expanded={!collapsed}
-            title={collapsed ? 'Expand' : 'Collapse'}
-          >
-            {collapsed ? '+' : '−'}
-          </button>
-          <h2 className="text-lg font-semibold">Settings</h2>
-        </div>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold">Settings</h2>
         <div className="flex items-center gap-3">
           {!editing && (
             <button className="btn-primary px-3 py-2" onClick={startEdit} disabled={saving || !loaded}>
@@ -90,8 +78,7 @@ export default function SettingsSection({ settings, loaded, form, setForm, savin
           )}
         </div>
       </div>
-      {!collapsed && (
-        <div className={"space-y-4 text-sm " + (editing ? '' : 'pointer-events-none')}> {/* keep interactive only when editing */}
+      <div className={"space-y-4 text-sm " + (editing ? '' : 'pointer-events-none')}> {/* keep interactive only when editing */}
           <label className={"text-sm flex flex-col relative " + (changed.userEmail ? 'after:absolute after:-right-2 after:top-2 after:w-2 after:h-2 after:rounded-full after:bg-amber-400' : '')}>
             <span className="text-gray-700 dark:text-gray-200 flex items-center gap-1">
               User email {changed.userEmail && <span className="text-amber-600 dark:text-amber-400 text-[10px] font-medium">Changed</span>}
@@ -150,8 +137,7 @@ export default function SettingsSection({ settings, loaded, form, setForm, savin
               <button className="btn-primary px-3 py-2" onClick={saveEdit} disabled={saving}>Save</button>
             </div>
           )}
-        </div>
-      )}
+      </div>
     </section>
   )
 }

@@ -9,7 +9,6 @@ import CreateTaskModal from './components/modals/CreateTaskModal'
 import EditTaskModal from './components/modals/EditTaskModal'
 // Removed AuthModal (replaced by inline AuthCard)
 import AuthCard from './components/sections/AuthCard'
-import NotificationDetailsModal from './components/modals/NotificationDetailsModal'
 import SettingsSection from './components/sections/SettingsSection'
 import TasksSection from './components/sections/TasksSection'
 import NotificationsSection from './components/sections/NotificationsSection'
@@ -27,8 +26,6 @@ export default function App() {
   const [tasksError, setTasksError] = useState<string | null>(null)
   const [notifications, setNotifications] = useState<NotificationItem[] | null>(null)
   const [notificationsError, setNotificationsError] = useState<string | null>(null)
-  const [showNotificationModal, setShowNotificationModal] = useState(false)
-  const [currentNotification, setCurrentNotification] = useState<NotificationItem | null>(null)
   const [notifDeleteMsg, setNotifDeleteMsg] = useState<string | null>(null)
 
   // Editable form state (Settings)
@@ -354,11 +351,6 @@ export default function App() {
     }
   }
 
-  function showNotification(n: NotificationItem) {
-    setCurrentNotification(n)
-    setShowNotificationModal(true)
-  }
-
   async function deleteNotification(id: number) {
     const ok = await openConfirm({
       title: `Delete notification #${id}?`,
@@ -483,7 +475,6 @@ export default function App() {
         {activeTab === 'notifications' && (
           <NotificationsSection
             notifications={notifications}
-            onShow={showNotification}
             onDelete={deleteNotification}
           />
         )}
@@ -507,11 +498,6 @@ export default function App() {
         updateMsg={updateMsg}
         onSave={saveEdit}
         onCancel={cancelEdit}
-      />
-      <NotificationDetailsModal
-        open={!!showNotificationModal}
-        notification={currentNotification}
-        onClose={() => setShowNotificationModal(false)}
       />
 
       <ConfirmDialog
