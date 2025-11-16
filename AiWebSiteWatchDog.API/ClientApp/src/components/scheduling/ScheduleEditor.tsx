@@ -43,8 +43,10 @@ export default function ScheduleEditor({ value, onChange, onValidityChange }: Pr
         cron = `${clamp(atMinute,0,59)} ${clamp(atHour,0,23)} ${clamp(dayOfMonth,1,31)} * *`
         break
     }
-    onChange(cron)
-  }, [mode, kind, nMinutes, nHours, atMinute, atHour, daysOfWeek, dayOfMonth, onChange])
+    if ((value || '') !== cron) {
+      onChange(cron)
+    }
+  }, [mode, kind, nMinutes, nHours, atMinute, atHour, daysOfWeek, dayOfMonth, value])
 
   const human = useMemo(() => {
     const cron = value || '* * * * *'
