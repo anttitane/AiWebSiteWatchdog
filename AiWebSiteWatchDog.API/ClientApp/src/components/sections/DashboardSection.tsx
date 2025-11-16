@@ -35,12 +35,12 @@ export default function DashboardSection({ settings, tasks, notifications, loade
             <div className="mt-1">
               <div className="font-medium truncate" title={nextScheduled.task.title}>{nextScheduled.task.title}</div>
               {nextScheduled.task.schedule && (
-                <div className="text-xs mt-1 text-gray-600 dark:text-gray-300" title={cronstrue.toString(nextScheduled.task.schedule, { use24HourTimeFormat: true })}>
-                  cron: {nextScheduled.task.schedule}
+                <div className="text-xs mt-1 text-gray-600 dark:text-gray-300" title={nextScheduled.task.schedule}>
+                  {cronstrue.toString(nextScheduled.task.schedule, { use24HourTimeFormat: true })}
                 </div>
               )}
               <div className="text-xs mt-1 text-gray-600 dark:text-gray-300" title={formatDateTime(nextScheduled.nextDate)}>
-                runs {formatRelative(nextScheduled.nextDate.toISOString())}
+                Runs {formatRelative(nextScheduled.nextDate.toISOString())}
               </div>
             </div>
           ) : (
