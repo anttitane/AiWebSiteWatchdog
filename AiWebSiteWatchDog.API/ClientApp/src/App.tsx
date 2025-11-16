@@ -19,6 +19,7 @@ import { getNotifications as svcGetNotifications, deleteNotification as svcDelet
 
 export default function App() {
   const [activeTab, setActiveTab] = useLocalStorageString<'dashboard' | 'tasks' | 'notifications' | 'settings'>('ui.activeTab', 'dashboard')
+  const [theme, setTheme] = useLocalStorageString<'light' | 'dark'>('ui.theme', 'light')
   const [settings, setSettings] = useState<Settings | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loaded, setLoaded] = useState(false)
@@ -86,6 +87,24 @@ export default function App() {
     confirmResolver.current = null
     if (r) r(result)
   }
+
+  // Initialize theme from system if not set, and apply to <html>
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('ui.theme')
+      if (!stored) {
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        setTheme(prefersDark ? 'dark' : 'light')
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    const root = document.documentElement
+    if (theme === 'dark') root.classList.add('dark')
+    else root.classList.remove('dark')
+  }, [theme])
 
   useEffect(() => {
     svcGetSettings()
@@ -386,28 +405,49 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-semibold tracking-tight">AiWebSiteWatchdog</h1>
-            <nav aria-label="Primary" className="hidden sm:block">
-              <ul className="flex items-center gap-1">
-                {[
-                  { key: 'dashboard', label: 'Dashboard' },
-                  { key: 'tasks', label: 'Tasks' },
-                  { key: 'notifications', label: 'Notifications' },
-                  { key: 'settings', label: 'Settings' }
-                ].map(t => (
-                  <li key={t.key}>
-                    <button
-                      onClick={() => setActiveTab(t.key as any)}
-                      className={"px-3 py-2 rounded-md text-sm font-medium transition-colors " + (activeTab === t.key
-                        ? 'bg-indigo-600 text-white dark:bg-indigo-500'
-                        : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700')}
-                      aria-current={activeTab === t.key ? 'page' : undefined}
-                    >
-                      {t.label}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </nav>
+            <div className="flex items-center gap-2">
+              <nav aria-label="Primary" className="hidden sm:block">
+                <ul className="flex items-center gap-1">
+                  {[
+                    { key: 'dashboard', label: 'Dashboard' },
+                    { key: 'tasks', label: 'Tasks' },
+                    { key: 'notifications', label: 'Notifications' },
+                    { key: 'settings', label: 'Settings' }
+                  ].map(t => (
+                    <li key={t.key}>
+                      <button
+                        onClick={() => setActiveTab(t.key as any)}
+                        className={"px-3 py-2 rounded-md text-sm font-medium transition-colors " + (activeTab === t.key
+                          ? 'bg-indigo-600 text-white dark:bg-indigo-500'
+                          : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700')}
+                        aria-current={activeTab === t.key ? 'page' : undefined}
+                      >
+                        {t.label}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
+              <button
+                className="btn-secondary w-9 h-9 p-0 ml-2"
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                aria-label="Toggle dark mode"
+              >
+                {theme === 'dark' ? (
+                  // Sun icon
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                    <path d="M12 18a6 6 0 100-12 6 6 0 000 12z" />
+                    <path fillRule="evenodd" d="M12 1.5a.75.75 0 01.75.75v2a.75.75 0 01-1.5 0v-2A.75.75 0 0112 1.5zm0 17.5a.75.75 0 01.75.75v2a.75.75 0 01-1.5 0v-2A.75.75 0 0112 19zM4.72 4.72a.75.75 0 011.06 0l1.414 1.415a.75.75 0 11-1.06 1.06L4.72 5.78a.75.75 0 010-1.06zm11.086 11.086a.75.75 0 011.06 0l1.415 1.414a.75.75 0 01-1.06 1.06l-1.415-1.414a.75.75 0 010-1.06zM1.5 12a.75.75 0 01.75-.75h2a.75.75 0 010 1.5h-2A.75.75 0 011.5 12zm17.5 0a.75.75 0 01.75-.75h2a.75.75 0 010 1.5h-2a.75.75 0 01-.75-.75zM4.72 19.28a.75.75 0 010-1.06l1.415-1.415a.75.75 0 011.06 1.06L5.78 19.28a.75.75 0 01-1.06 0zm11.086-11.086a.75.75 0 010-1.06l1.414-1.415a.75.75 0 111.06 1.06l-1.414 1.415a.75.75 0 01-1.06 0z" clipRule="evenodd" />
+                  </svg>
+                ) : (
+                  // Moon icon
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                    <path d="M21 12.79A9 9 0 1111.21 3a7 7 0 109.79 9.79z" />
+                  </svg>
+                )}
+              </button>
+            </div>
           </div>
           {/* Mobile nav */}
           <nav aria-label="Primary" className="sm:hidden mt-4">
