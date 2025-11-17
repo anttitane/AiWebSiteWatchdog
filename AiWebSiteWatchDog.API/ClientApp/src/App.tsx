@@ -283,10 +283,10 @@ export default function App() {
       // Refresh tasks and settings summaries
       const [tasksList, s] = await Promise.all([
         svcGetTasks(),
-        svcGetSettings().catch(() => null as any)
+        svcGetSettings().catch((): Settings | null => null)
       ])
       setTasks(tasksList)
-      setSettings(s as Settings | null)
+      setSettings(s)
       setNewTask({ title: '', url: '', taskPrompt: '', schedule: '', enabled: true })
       setCreateMsg('Task created')
       toast.success('Task created', { id: toastId })
@@ -346,10 +346,10 @@ export default function App() {
       // Update tasks list and settings summaries
       const [t, s] = await Promise.all([
         svcGetTasks(),
-        svcGetSettings().catch(() => null as any)
+        svcGetSettings().catch((): Settings | null => null)
       ])
       setTasks(t)
-      setSettings(s as Settings | null)
+      setSettings(s)
       setUpdateMsg('Task updated')
       toast.success('Task updated', { id: toastId })
       setEditId(null)
@@ -418,10 +418,10 @@ export default function App() {
       await svcDeleteTask(id)
       const [tasksList, s] = await Promise.all([
         svcGetTasks(),
-        svcGetSettings().catch(() => null as any)
+        svcGetSettings().catch((): Settings | null => null)
       ])
       setTasks(tasksList)
-      setSettings(s as Settings | null)
+      setSettings(s)
       setDeleteMsg(`Task #${id} deleted`)
       toast.success(`Task #${id} deleted`, { id: toastId })
     } catch (e: unknown) {
