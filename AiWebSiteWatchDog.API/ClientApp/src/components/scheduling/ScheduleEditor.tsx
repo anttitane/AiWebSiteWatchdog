@@ -46,7 +46,7 @@ export default function ScheduleEditor({ value, onChange, onValidityChange }: Pr
     if ((value || '') !== cron) {
       onChange(cron)
     }
-  }, [mode, kind, nMinutes, nHours, atMinute, atHour, daysOfWeek, dayOfMonth, value])
+  }, [mode, kind, nMinutes, nHours, atMinute, atHour, daysOfWeek, dayOfMonth, value, onChange])
 
   const human = useMemo(() => {
     const cron = value || '* * * * *'
