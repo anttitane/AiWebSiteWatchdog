@@ -5,7 +5,13 @@ export function useLocalStorageBoolean(key: string, defaultValue = false) {
   const [value, setValue] = useState<boolean>(() => {
     try {
       const raw = localStorage.getItem(key)
-      if (raw !== null) return raw === '1' || raw === 'true'
+      if (raw !== null) {
+        // Prefer 'true'/'false'; keep backward compatibility for '1'/'0'
+        if (raw === 'true') return true
+        if (raw === 'false') return false
+        if (raw === '1') return true
+        if (raw === '0') return false
+      }
     } catch {
       // ignore (e.g., storage disabled)
     }
@@ -15,7 +21,8 @@ export function useLocalStorageBoolean(key: string, defaultValue = false) {
   // Persist on change
   useEffect(() => {
     try {
-      localStorage.setItem(key, value ? '1' : '0')
+      // Standardize to 'true'/'false' for readability
+      localStorage.setItem(key, value ? 'true' : 'false')
     } catch {
       // ignore
     }
