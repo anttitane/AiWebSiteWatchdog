@@ -121,13 +121,7 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [mobileNavOpen])
 
-  // When closed, mark drawer tree inert to prevent focus; remove when open
-  useEffect(() => {
-    const el = mobileNavRootRef.current
-    if (!el) return
-    if (mobileNavOpen) el.removeAttribute('inert')
-    else el.setAttribute('inert', '')
-  }, [mobileNavOpen])
+  // (Removed) inert handling since we unmount the drawer when closed
 
   // Focus trap within the mobile drawer when open
   useEffect(() => {
@@ -533,60 +527,62 @@ export default function App() {
               </button>
             </div>
           </div>
-          {/* Mobile sidebar drawer for navigation */}
-          <div ref={mobileNavRootRef} className={`sm:hidden fixed inset-0 z-40 ${mobileNavOpen ? '' : 'pointer-events-none'}`}>
-            {/* Backdrop */}
-            <div
-              className={`absolute inset-0 bg-black/50 transition-opacity ${mobileNavOpen ? 'opacity-100' : 'opacity-0'}`}
-              onClick={() => { setMobileNavOpen(false); setTimeout(() => mobileMenuButtonRef.current?.focus(), 0) }}
-            />
-            {/* Drawer */}
-            <aside
-              role="dialog"
-              aria-label="Navigation"
-              aria-modal="true"
-              id="mobile-nav-drawer"
-              ref={mobileNavDrawerRef}
-              className={`absolute left-0 top-0 h-full w-64 max-w-[80vw] bg-white dark:bg-gray-800 shadow-lg transform transition-transform ${mobileNavOpen ? 'translate-x-0' : '-translate-x-full'}`}
-            >
-              <div className="p-4 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
-                <span className="text-base font-semibold">Navigation</span>
-                <button
-                  className="btn-secondary w-8 h-8 p-0"
-                  aria-label="Close navigation"
-                  ref={mobileNavCloseBtnRef}
-                  onClick={() => { setMobileNavOpen(false); setTimeout(() => mobileMenuButtonRef.current?.focus(), 0) }}
-                >
-                  {/* Close icon */}
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-                    <path fillRule="evenodd" d="M5.47 5.47a.75.75 0 011.06 0L12 10.94l5.47-5.47a.75.75 0 111.06 1.06L13.06 12l5.47 5.47a.75.75 0 11-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 11-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 010-1.06z" clipRule="evenodd" />
-                  </svg>
-                </button>
-              </div>
-              <nav className="p-2">
-                <ul className="space-y-1">
-                  {[
-                    { key: 'dashboard', label: 'Dashboard' },
-                    { key: 'tasks', label: 'Tasks' },
-                    { key: 'notifications', label: 'Notifications' },
-                    { key: 'settings', label: 'Settings' }
-                  ].map(t => (
-                    <li key={t.key}>
-                      <button
-                        onClick={() => { setActiveTab(t.key as any); setMobileNavOpen(false); setTimeout(() => mobileMenuButtonRef.current?.focus(), 0) }}
-                        className={"w-full text-left px-3 py-2 rounded-md text-sm font-medium transition-colors " + (activeTab === t.key
-                          ? 'bg-indigo-600 text-white dark:bg-indigo-500'
-                          : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700')}
-                        aria-current={activeTab === t.key ? 'page' : undefined}
-                      >
-                        {t.label}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </nav>
-            </aside>
-          </div>
+          {/* Mobile sidebar drawer for navigation (unmounted when closed) */}
+          {mobileNavOpen && (
+            <div ref={mobileNavRootRef} className="sm:hidden fixed inset-0 z-40">
+              {/* Backdrop */}
+              <div
+                className="absolute inset-0 bg-black/50"
+                onClick={() => { setMobileNavOpen(false); setTimeout(() => mobileMenuButtonRef.current?.focus(), 0) }}
+              />
+              {/* Drawer */}
+              <aside
+                role="dialog"
+                aria-label="Navigation"
+                aria-modal="true"
+                id="mobile-nav-drawer"
+                ref={mobileNavDrawerRef}
+                className="absolute left-0 top-0 h-full w-64 max-w-[80vw] bg-white dark:bg-gray-800 shadow-lg transform translate-x-0 transition-transform"
+              >
+                <div className="p-4 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
+                  <span className="text-base font-semibold">Navigation</span>
+                  <button
+                    className="btn-secondary w-8 h-8 p-0"
+                    aria-label="Close navigation"
+                    ref={mobileNavCloseBtnRef}
+                    onClick={() => { setMobileNavOpen(false); setTimeout(() => mobileMenuButtonRef.current?.focus(), 0) }}
+                  >
+                    {/* Close icon */}
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                      <path fillRule="evenodd" d="M5.47 5.47a.75.75 0 011.06 0L12 10.94l5.47-5.47a.75.75 0 111.06 1.06L13.06 12l5.47 5.47a.75.75 0 11-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 11-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 010-1.06z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </div>
+                <nav className="p-2">
+                  <ul className="space-y-1">
+                    {[
+                      { key: 'dashboard', label: 'Dashboard' },
+                      { key: 'tasks', label: 'Tasks' },
+                      { key: 'notifications', label: 'Notifications' },
+                      { key: 'settings', label: 'Settings' }
+                    ].map(t => (
+                      <li key={t.key}>
+                        <button
+                          onClick={() => { setActiveTab(t.key as any); setMobileNavOpen(false); setTimeout(() => mobileMenuButtonRef.current?.focus(), 0) }}
+                          className={"w-full text-left px-3 py-2 rounded-md text-sm font-medium transition-colors " + (activeTab === t.key
+                            ? 'bg-indigo-600 text-white dark:bg-indigo-500'
+                            : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700')}
+                          aria-current={activeTab === t.key ? 'page' : undefined}
+                        >
+                          {t.label}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </nav>
+              </aside>
+            </div>
+          )}
         </div>
       </header>
       <main className="flex-1 max-w-7xl mx-auto w-full px-6 py-6 space-y-6">
