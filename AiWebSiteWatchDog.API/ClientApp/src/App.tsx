@@ -93,6 +93,15 @@ export default function App() {
     if (r) r(result)
   }
 
+  // More reliable than setTimeout(0): wait for two animation frames
+  function refocusMenuButtonSoon() {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        mobileMenuButtonRef.current?.focus()
+      })
+    })
+  }
+
   // Initialize theme from system if not set, and apply to <html>
   useEffect(() => {
     try {
@@ -533,7 +542,7 @@ export default function App() {
               {/* Backdrop */}
               <div
                 className="absolute inset-0 bg-black/50"
-                onClick={() => { setMobileNavOpen(false); setTimeout(() => mobileMenuButtonRef.current?.focus(), 0) }}
+                onClick={() => { setMobileNavOpen(false); refocusMenuButtonSoon() }}
               />
               {/* Drawer */}
               <aside
@@ -550,7 +559,7 @@ export default function App() {
                     className="btn-secondary w-8 h-8 p-0"
                     aria-label="Close navigation"
                     ref={mobileNavCloseBtnRef}
-                    onClick={() => { setMobileNavOpen(false); setTimeout(() => mobileMenuButtonRef.current?.focus(), 0) }}
+                    onClick={() => { setMobileNavOpen(false); refocusMenuButtonSoon() }}
                   >
                     {/* Close icon */}
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
@@ -568,7 +577,7 @@ export default function App() {
                     ].map(t => (
                       <li key={t.key}>
                         <button
-                          onClick={() => { setActiveTab(t.key as any); setMobileNavOpen(false); setTimeout(() => mobileMenuButtonRef.current?.focus(), 0) }}
+                          onClick={() => { setActiveTab(t.key as any); setMobileNavOpen(false); refocusMenuButtonSoon() }}
                           className={"w-full text-left px-3 py-2 rounded-md text-sm font-medium transition-colors " + (activeTab === t.key
                             ? 'bg-indigo-600 text-white dark:bg-indigo-500'
                             : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700')}
