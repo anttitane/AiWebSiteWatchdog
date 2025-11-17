@@ -216,16 +216,21 @@ function parseSimpleFromCron(cron: string): (Partial<{
   const [minF, hourF, domF, monF, dowF] = tokens
 
   // Every N minutes: */N * * * *
-  const everyMin = minF.match(/^\*\/(\d{1,2})$/) && hourF==='*' && domF==='*' && monF==='*' && dowF==='*'
+  const minEveryMatch = minF.match(/^\*\/(\d{1,2})$/)
+  const everyMin = !!minEveryMatch && hourF==='*' && domF==='*' && monF==='*' && dowF==='*'
   if (everyMin) {
-    const n = Number((minF.match(/^\*\/(\d{1,2})$/) as RegExpMatchArray)[1])
+    const nStr = minEveryMatch?.[1]
+    const n = nStr !== undefined ? Number(nStr) : NaN
     if (n>=1 && n<=59) return { kind: 'every-n-minutes', nMinutes: n }
   }
 
   // Every N hours at M minutes: M */N * * *
-  const everyHours = hourF.match(/^\*\/(\d{1,2})$/) && domF==='*' && monF==='*' && dowF==='*' && minF.match(/^\d{1,2}$/)
+  const hourEveryMatch = hourF.match(/^\*\/(\d{1,2})$/)
+  const minFixedMatch = minF.match(/^\d{1,2}$/)
+  const everyHours = !!hourEveryMatch && domF==='*' && monF==='*' && dowF==='*' && !!minFixedMatch
   if (everyHours) {
-    const n = Number((hourF.match(/^\*\/(\d{1,2})$/) as RegExpMatchArray)[1])
+    const nStr = hourEveryMatch?.[1]
+    const n = nStr !== undefined ? Number(nStr) : NaN
     const m = Number(minF)
     if (n>=1 && n<=23 && m>=0 && m<=59) return { kind: 'every-n-hours', nHours: n, atMinute: m }
   }
