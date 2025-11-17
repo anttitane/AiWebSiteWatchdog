@@ -1,4 +1,7 @@
 import { EditTaskForm } from '../../types'
+import { useModalAnimation } from '../../hooks/useModalAnimation'
+import ScheduleEditor from '../scheduling/ScheduleEditor'
+import { useState } from 'react'
 
 type Props = {
   open: boolean
@@ -12,62 +15,67 @@ type Props = {
 }
 
 export default function EditTaskModal({ open, editId, editTask, setEditTask, updating, updateMsg, onSave, onCancel }: Props) {
-  if (!open || editId === null) return null
+  const { mounted, leaving } = useModalAnimation(open)
+  const [scheduleValid, setScheduleValid] = useState(true)
+  if (!mounted) return null
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-      <div style={{ background: '#fff', padding: 16, borderRadius: 8, width: 'min(720px, 95vw)' }}>
-        <h3>Edit task #{editId}</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8 }}>
-          <label>
-            Title
-            <input
-              type="text"
-              value={editTask.title ?? ''}
-              onChange={e => setEditTask(s => ({ ...s, title: e.target.value }))}
-              style={{ width: '100%', padding: '.5rem', marginTop: 4, boxSizing: 'border-box' }}
-            />
-          </label>
-          <label>
-            URL
-            <input
-              type="url"
-              value={editTask.url ?? ''}
-              onChange={e => setEditTask(s => ({ ...s, url: e.target.value }))}
-              style={{ width: '100%', padding: '.5rem', marginTop: 4, boxSizing: 'border-box' }}
-            />
-          </label>
-          <label>
-            Task prompt
-            <textarea
-              value={editTask.taskPrompt ?? ''}
-              onChange={e => setEditTask(s => ({ ...s, taskPrompt: e.target.value }))}
-              rows={3}
-              style={{ width: '100%', padding: '.5rem', marginTop: 4, boxSizing: 'border-box' }}
-            />
-          </label>
-          <label>
-            Schedule
-            <input
-              type="text"
-              value={editTask.schedule ?? ''}
-              onChange={e => setEditTask(s => ({ ...s, schedule: e.target.value }))}
-              style={{ width: '100%', padding: '.5rem', marginTop: 4, boxSizing: 'border-box' }}
-            />
-          </label>
-          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-            <input
-              type="checkbox"
-              checked={!!editTask.enabled}
-              onChange={e => setEditTask(s => ({ ...s, enabled: e.target.checked }))}
-            />
-            Enabled
-          </label>
-          <div>
-            <button onClick={async () => { const ok = await onSave(editId); if (ok) onCancel(); }} disabled={updating}>
-              {updating ? 'Saving…' : 'Save'}
-            </button>
-            <button onClick={onCancel} style={{ marginLeft: 8 }} disabled={updating}>Cancel</button>
-            {updateMsg && <span style={{ color: 'seagreen', marginLeft: 12 }}>{updateMsg}</span>}
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className={"absolute inset-0 bg-black/40 " + (leaving ? 'modal-anim-overlay-out' : 'modal-anim-overlay')} onClick={onCancel} />
+      <div className="relative z-10 w-full max-w-3xl mx-auto">
+        <div className={("bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-6 ") + (leaving ? 'modal-anim-panel-out' : 'modal-anim-panel')}>
+          <h3 className="text-lg font-semibold mb-4">Edit task #{editId}</h3>
+          <div className="grid grid-cols-1 gap-4">
+            <label className="text-sm">
+              <span className="text-gray-700 dark:text-gray-200">Title</span>
+              <input
+                className="modal-input"
+                type="text"
+                value={editTask.title ?? ''}
+                onChange={e => setEditTask(s => ({ ...s, title: e.target.value }))}
+              />
+            </label>
+            <label className="text-sm">
+              <span className="text-gray-700 dark:text-gray-200">URL</span>
+              <input
+                className="modal-input"
+                type="url"
+                value={editTask.url ?? ''}
+                onChange={e => setEditTask(s => ({ ...s, url: e.target.value }))}
+              />
+            </label>
+            <label className="text-sm">
+              <span className="text-gray-700 dark:text-gray-200">Task prompt</span>
+              <textarea
+                className="modal-input"
+                value={editTask.taskPrompt ?? ''}
+                onChange={e => setEditTask(s => ({ ...s, taskPrompt: e.target.value }))}
+                rows={3}
+              />
+            </label>
+            <div className="text-sm">
+              <span className="text-gray-700 dark:text-gray-200">Schedule</span>
+              <div className="mt-1">
+                <ScheduleEditor
+                  value={editTask.schedule}
+                  onChange={(cron) => setEditTask(s => ({ ...s, schedule: cron }))}
+                  onValidityChange={setScheduleValid}
+                />
+              </div>
+            </div>
+            <label className="inline-flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={!!editTask.enabled}
+                onChange={e => setEditTask(s => ({ ...s, enabled: e.target.checked }))}
+              />
+              Enabled
+            </label>
+            <div className="flex justify-end gap-3 pt-2">
+              <button className="btn-secondary px-3 py-2" onClick={onCancel} disabled={updating}>Cancel</button>
+              <button className="btn-primary px-3 py-2" onClick={async () => { if (editId == null) return; const ok = await onSave(editId); if (ok) onCancel(); }} disabled={updating || !scheduleValid || editId == null}>
+                {updating ? 'Saving…' : 'Save'}
+              </button>
+            </div>
           </div>
         </div>
       </div>
