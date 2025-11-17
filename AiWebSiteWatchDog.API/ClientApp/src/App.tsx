@@ -111,6 +111,7 @@ export default function App() {
         setTheme(prefersDark ? 'dark' : 'light')
       }
     } catch {}
+    // Intentionally run only once on mount; setTheme is stable and safe to omit from deps.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
