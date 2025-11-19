@@ -59,7 +59,10 @@ To send email using the Gmail API, you need a Google OAuth2 client_secret.json f
 
 **Important:**
 - If your OAuth consent screen is in testing mode, you must add your Google account as a test user in the "Test users" section of the consent screen (found in the audience tab).
+	- If your OAuth consent screen is not “In production”, tokens time out on or shortly after day 7 and you need to re-authenticate. 
 - Alternatively, you can publish the app to make it available to all users in your organization or publicly.
+	- This app uses sensitive scope (Gmail). This means that you need to send your Google OAuth app for verification. 
+	- If you have a Google Workspace domain: set the consent screen User Type to Internal. Internal apps don’t expire tokens and never show the unverified warning to domain users (you).
 - The app requests both Gmail send and Gemini (Generative Language) scopes using a single combined consent; if scopes change later you must re-consent (delete stored token row / token files).
 
 ### 2. Running the Application
