@@ -18,49 +18,9 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
             // - If the schema already exists, do not apply migrations
             try
             {
-                if (db.Database.IsSqlite())
-                {
-                    var conn = db.Database.GetDbConnection();
-                    if (conn.State != ConnectionState.Open)
-                        conn.Open();
-
-                    bool HasTable(string name)
-                    {
-                        using var cmd = conn.CreateCommand();
-                        cmd.CommandText = "SELECT 1 FROM sqlite_master WHERE type='table' AND name=$name;";
-                        var p = cmd.CreateParameter();
-                        p.ParameterName = "$name";
-                        p.Value = name;
-                        cmd.Parameters.Add(p);
-                        using var reader = cmd.ExecuteReader();
-                        return reader.Read();
-                    }
-
-                    // If none of the app tables exist, create schema using migrations (initial create)
-                    var hasAppTables = HasTable("UserSettings") || HasTable("WatchTasks") || HasTable("Notifications") || HasTable("GoogleOAuthTokens");
-                    if (!hasAppTables)
-                    {
-                        Log.Information("No application tables found. Applying initial migrations to create schema.");
-                        db.Database.Migrate();
-                    }
-                    else
-                    {
-                        Log.Information("Application tables already exist. Skipping EF Core migrations.");
-                    }
-                }
-                else
-                {
-                    // Non-SQLite providers: create schema only if the database is not reachable
-                    if (!db.Database.CanConnect())
-                    {
-                        Log.Information("Database not reachable. Applying initial migrations to create schema.");
-                        db.Database.Migrate();
-                    }
-                    else
-                    {
-                        Log.Information("Database reachable. Skipping EF Core migrations.");
-                    }
-                }
+                // Always apply pending migrations to keep schema current across versions
+                Log.Information("Applying EF Core migrations (if any) to ensure schema is up-to-date.");
+                db.Database.Migrate();
             }
             catch (Exception ex)
             {

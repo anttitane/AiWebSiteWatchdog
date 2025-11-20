@@ -8,6 +8,9 @@ namespace AiWebSiteWatchDog.Domain.Entities
         public string SenderEmail { get; set; } = senderEmail;
         public string SenderName { get; set; } = senderName;
         public string GeminiApiUrl { get; set; } = GeminiDefaults.ApiUrl;
+        public NotificationChannel NotificationChannel { get; set; } = NotificationChannel.Email;
+        public string? TelegramBotToken { get; set; }
+        public string? TelegramChatId { get; set; }
         public ICollection<WatchTask> WatchTasks { get; set; } = new List<WatchTask>();
     }
 }

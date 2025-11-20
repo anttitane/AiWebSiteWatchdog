@@ -48,12 +48,21 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("NotificationChannel")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("SenderEmail")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("SenderName")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TelegramBotToken")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TelegramChatId")
                         .HasColumnType("TEXT");
 
                     b.HasKey("UserEmail");
