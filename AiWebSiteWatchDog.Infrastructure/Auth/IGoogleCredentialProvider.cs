@@ -9,6 +9,8 @@ namespace AiWebSiteWatchDog.Infrastructure.Auth
         Task<UserCredential> GetGmailAndGeminiCredentialAsync(string senderEmail, CancellationToken ct = default);
         // Overloads to allow dynamic inclusion of Gmail scope
         Task<UserCredential> GetCredentialAsync(string senderEmail, bool includeGmailSend, CancellationToken ct = default);
+        // Scope inspection
+        Task<bool> HasGmailSendScopeAsync(string senderEmail, CancellationToken ct = default);
         // Web-based OAuth helpers
         string CreateAuthorizationUrl(string senderEmail, string redirectUri, string? state = null);
         string CreateAuthorizationUrl(string senderEmail, string redirectUri, bool includeGmailSend, string? state = null);

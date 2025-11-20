@@ -34,6 +34,20 @@ namespace AiWebSiteWatchDog.API
 
             app.MapPut("/settings", async ([FromServices] ISettingsService settingsService, UserSettings settings) =>
             {
+                // Basic validation depending on notification channel
+                var errors = new Dictionary<string, string[]>();
+                if (settings.NotificationChannel == NotificationChannel.Email)
+                {
+                    if (string.IsNullOrWhiteSpace(settings.SenderEmail)) errors["SenderEmail"] = ["SenderEmail is required for Email channel."];
+                    if (string.IsNullOrWhiteSpace(settings.SenderName)) errors["SenderName"] = ["SenderName is required for Email channel."];
+                }
+                else if (settings.NotificationChannel == NotificationChannel.Telegram)
+                {
+                    if (string.IsNullOrWhiteSpace(settings.TelegramBotToken)) errors["TelegramBotToken"] = ["TelegramBotToken is required for Telegram channel."];
+                    if (string.IsNullOrWhiteSpace(settings.TelegramChatId)) errors["TelegramChatId"] = ["TelegramChatId is required for Telegram channel."];
+                }
+                if (errors.Count > 0) return Results.ValidationProblem(errors);
+
                 await settingsService.SaveSettingsAsync(settings);
                 return Results.Ok();
             })
@@ -402,6 +416,9 @@ namespace AiWebSiteWatchDog.API
                         return Results.BadRequest("Sender email not configured and no senderEmail query parameter provided.");
                     senderEmail = settings.SenderEmail;
                 }
+                // Determine whether Gmail send scope should be requested based on current channel
+                var settingsForScope = await settingsService.GetSettingsAsync();
+                bool includeGmail = settingsForScope?.NotificationChannel == NotificationChannel.Email;
 
                 // Build external redirect URI using request info (respects forwarded headers)
                 var host = request.Scheme + "://" + request.Host.ToUriComponent();
@@ -411,12 +428,34 @@ namespace AiWebSiteWatchDog.API
                 var state = Guid.NewGuid().ToString("n");
                 cache.Set($"oauth:state:{state}", senderEmail!, TimeSpan.FromMinutes(10));
 
-                var url = credentialProvider.CreateAuthorizationUrl(senderEmail!, callback, state);
+                var url = credentialProvider.CreateAuthorizationUrl(senderEmail!, callback, includeGmail, state);
                 return Results.Redirect(url);
             })
             .WithTags("auth")
             .WithDescription("Starts Google OAuth consent and redirects the client to Google. Optional query ?senderEmail=")
             .RequireRateLimiting("StrictPerIp");
+
+            // Auth status endpoint (scope presence & reauth advice)
+            app.MapGet("/auth/status", async (
+                [FromServices] Infrastructure.Auth.IGoogleCredentialProvider credentialProvider,
+                [FromServices] ISettingsService settingsService) =>
+            {
+                var settings = await settingsService.GetSettingsAsync();
+                if (settings is null)
+                {
+                    return Results.Ok(new { configured = false, channel = (NotificationChannel?)null, hasGmailScope = false, needsReauth = false });
+                }
+                bool hasScope = false;
+                if (!string.IsNullOrWhiteSpace(settings.SenderEmail))
+                {
+                    try { hasScope = await credentialProvider.HasGmailSendScopeAsync(settings.SenderEmail); }
+                    catch { hasScope = false; }
+                }
+                bool needsReauth = settings.NotificationChannel == NotificationChannel.Email && !hasScope;
+                return Results.Ok(new { configured = true, channel = settings.NotificationChannel, hasGmailScope = hasScope, needsReauth });
+            })
+            .WithTags("auth")
+            .WithDescription("Returns auth scope status and whether re-authorization is required for current channel.");
 
             // OAuth callback endpoint: Google redirects here with ?code= and ?state=
             app.MapGet("/auth/callback", async (
@@ -453,45 +492,6 @@ namespace AiWebSiteWatchDog.API
             .WithTags("auth")
             .WithDescription("OAuth2 callback endpoint to complete Google consent and persist tokens.")
             .DisableRateLimiting();
-
-            // Simple UI page to initiate consent via a clickable button (opens new tab)
-            app.MapGet("/auth", async ([FromServices] ISettingsService settingsService) =>
-            {
-                var settings = await settingsService.GetSettingsAsync();
-                var prefill = WebUtility.HtmlEncode(settings?.SenderEmail ?? string.Empty);
-                                var html = $@"<html>
-                                                <head>
-                                                    <title>Authorize Gmail/Gemini</title>
-                                                    <style>
-                                                        body {{ font-family: sans-serif; margin: 2rem }}
-                                                        input, button {{ font-size: 1rem; padding: .5rem; margin: .25rem 0 }}
-                                                    </style>
-                                                </head>
-                                                <body>
-                                                    <h2>Authorize AiWebSiteWatchDog with Google</h2>
-
-                                                    <p>
-                                                        Click the button to open Google consent in a new tab. After you approve, you can close that tab.
-                                                    </p>
-
-                                                    <form method=""get"" action=""/auth/start"" target=""_blank"">
-                                                        <label>
-                                                            Sender email<br />
-                                                            <input type=""email"" name=""senderEmail"" value=""{prefill}"" required />
-                                                        </label>
-                                                        <br />
-                                                        <button type=""submit"">Open Google consent</button>
-                                                        <p>
-                                                            <small>If your email is saved in settings, you can leave it as-is.</small>
-                                                        </p>
-                                                    </form>
-                                                </body>
-                                            </html>";
-                return Results.Content(html, "text/html");
-            })
-            .WithTags("auth")
-            .WithDescription("Minimal HTML page with a button that opens the Google consent in a new tab.");
-        
         } 
     }
 }

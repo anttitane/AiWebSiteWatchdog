@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Linq;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Auth.OAuth2.Flows;
 using Google.Apis.Auth.OAuth2.Responses;
@@ -216,6 +217,31 @@ namespace AiWebSiteWatchDog.Infrastructure.Auth
 
             TokenResponse token = await flow.ExchangeCodeForTokenAsync(senderEmail, code, redirectUri, ct);
             return new UserCredential(flow, senderEmail, token);
+        }
+
+        public async Task<bool> HasGmailSendScopeAsync(string senderEmail, CancellationToken ct = default)
+        {
+            // Build minimal flow (Gemini-only) just to access token store; scopes of existing token reflect original consent
+            var clientSecretJson = ResolveClientSecretJson();
+            using var secretStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(clientSecretJson));
+            var secrets = GoogleClientSecrets.FromStream(secretStream).Secrets;
+
+            IDataStore dataStore = _useDbStore
+                ? new DbEncryptedDataStore(_dbContext, _encryptionKey!)
+                : CreateFileStore(senderEmail);
+
+            using var flow = new GoogleAuthorizationCodeFlow(new GoogleAuthorizationCodeFlow.Initializer
+            {
+                ClientSecrets = secrets,
+                Scopes = BuildScopes(includeGmailSend: false), // minimal
+                DataStore = dataStore
+            });
+
+            var token = await flow.LoadTokenAsync(senderEmail, ct);
+            if (token == null) return false;
+            if (string.IsNullOrWhiteSpace(token.Scope)) return false;
+            var scopes = token.Scope.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            return scopes.Contains(GmailService.Scope.GmailSend, StringComparer.OrdinalIgnoreCase);
         }
 
         private string ResolveClientSecretJson()

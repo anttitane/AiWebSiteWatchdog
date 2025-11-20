@@ -87,6 +87,9 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
                     existing.GeminiApiUrl = string.IsNullOrWhiteSpace(settings.GeminiApiUrl)
                         ? GeminiDefaults.ApiUrl
                         : settings.GeminiApiUrl;
+                    existing.NotificationChannel = settings.NotificationChannel;
+                    existing.TelegramBotToken = settings.TelegramBotToken;
+                    existing.TelegramChatId = settings.TelegramChatId;
                 }
                 await _dbContext.SaveChangesAsync();
                 // Update cache after save
