@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using AiWebSiteWatchDog.API.Jobs;
 using Microsoft.AspNetCore.HttpOverrides;
 using AiWebSiteWatchDog.API.Configuration;
+using System.Text.Json.Serialization;
 
 // Serilog will be configured from appsettings.json via UseSerilog below so
 // logging configuration can be adjusted without recompiling.
@@ -82,6 +83,12 @@ builder.Services.AddSwaggerGen(options =>
 var defaultConn = builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=AiWebSiteWatchdog.db";
 builder.Services.AddDbContext<AiWebSiteWatchDog.Infrastructure.Persistence.AppDbContext>(options =>
     options.UseSqlite(defaultConn));
+
+// Ensure enums are serialized/deserialized as strings for Minimal APIs
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+});
 
 // Add in-memory cache for settings caching
 builder.Services.AddMemoryCache();

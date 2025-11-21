@@ -16,7 +16,7 @@ namespace AiWebSiteWatchDog.Domain.DTOs
                 settings.SenderEmail,
                 settings.SenderName,
                 settings.GeminiApiUrl,
-                (int)settings.NotificationChannel,
+                settings.NotificationChannel.ToString(),
                 settings.TelegramBotToken,
                 settings.TelegramChatId,
                 settings.WatchTasks.Select(t => t.ToSummaryDto()).ToList());
