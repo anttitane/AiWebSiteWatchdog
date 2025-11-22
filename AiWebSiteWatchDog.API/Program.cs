@@ -104,6 +104,7 @@ builder.Services.AddScoped<AiWebSiteWatchDog.Infrastructure.Auth.IGoogleCredenti
 builder.Services.AddScoped<IEmailSender, AiWebSiteWatchDog.Infrastructure.Email.EmailSender>();
 builder.Services.AddScoped<ITelegramSender, AiWebSiteWatchDog.Infrastructure.Telegram.TelegramSender>();
 builder.Services.AddHttpClient<IGeminiApiClient, AiWebSiteWatchDog.Infrastructure.Gemini.GeminiApiClient>();
+builder.Services.AddSingleton<AiWebSiteWatchDog.Infrastructure.Events.SseEventPublisher>();
 
 // Register application services
 builder.Services.AddScoped<ISettingsService, AiWebSiteWatchDog.Application.Services.SettingsService>();

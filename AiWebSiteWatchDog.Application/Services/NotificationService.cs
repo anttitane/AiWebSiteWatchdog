@@ -43,8 +43,9 @@ namespace AiWebSiteWatchDog.Application.Services
                 }
 
                 await _notificationRepository.AddAsync(notification);
+                var dto = notification.ToDto();
                 _logger.LogInformation("Notification persisted. Channel {Channel}. Subject: {Subject}", settings.NotificationChannel, request.Subject);
-                return notification.ToDto();
+                return dto;
             }
             catch (Exception ex)
             {
