@@ -435,8 +435,8 @@ namespace AiWebSiteWatchDog.API
             .WithDescription("Starts Google OAuth consent and redirects the client to Google. Optional query ?senderEmail=")
             .RequireRateLimiting("StrictPerIp");
 
-            // Auth status endpoint (scope presence & reauth advice)
-            app.MapGet("/auth/status", async (
+            // Gmail auth status endpoint (scope presence & reauth advice)
+            app.MapGet("/auth/gmail-status", async (
                 [FromServices] Infrastructure.Auth.IGoogleCredentialProvider credentialProvider,
                 [FromServices] ISettingsService settingsService) =>
             {
@@ -455,7 +455,30 @@ namespace AiWebSiteWatchDog.API
                 return Results.Ok(new { configured = true, channel = settings.NotificationChannel, hasGmailScope = hasScope, needsReauth });
             })
             .WithTags("auth")
-            .WithDescription("Returns auth scope status and whether re-authorization is required for current channel.");
+            .WithDescription("Returns Gmail scope status and whether re-authorization is required for current channel.");
+
+            // Gemini auth status endpoint (Gemini scope presence & reauth advice)
+            app.MapGet("/auth/gemini-status", async (
+                [FromServices] Infrastructure.Auth.IGoogleCredentialProvider credentialProvider,
+                [FromServices] ISettingsService settingsService) =>
+            {
+                var settings = await settingsService.GetSettingsAsync();
+                if (settings is null)
+                {
+                    return Results.Ok(new { configured = false, hasGeminiScope = false, needsReauth = false });
+                }
+                bool hasGemini = false;
+                if (!string.IsNullOrWhiteSpace(settings.SenderEmail))
+                {
+                    try { hasGemini = await credentialProvider.HasGeminiScopeAsync(settings.SenderEmail); }
+                    catch { hasGemini = false; }
+                }
+                // Always required for app functionality
+                bool needsReauth = !hasGemini;
+                return Results.Ok(new { configured = true, hasGeminiScope = hasGemini, needsReauth });
+            })
+            .WithTags("auth")
+            .WithDescription("Returns Gemini scope status and whether re-authorization is required to use Gemini API.");
 
             // OAuth callback endpoint: Google redirects here with ?code= and ?state=
             app.MapGet("/auth/callback", async (

@@ -244,6 +244,30 @@ namespace AiWebSiteWatchDog.Infrastructure.Auth
             return scopes.Contains(GmailService.Scope.GmailSend, StringComparer.OrdinalIgnoreCase);
         }
 
+        public async Task<bool> HasGeminiScopeAsync(string senderEmail, CancellationToken ct = default)
+        {
+            var clientSecretJson = ResolveClientSecretJson();
+            using var secretStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(clientSecretJson));
+            var secrets = GoogleClientSecrets.FromStream(secretStream).Secrets;
+
+            IDataStore dataStore = _useDbStore
+                ? new DbEncryptedDataStore(_dbContext, _encryptionKey!)
+                : CreateFileStore(senderEmail);
+
+            using var flow = new GoogleAuthorizationCodeFlow(new GoogleAuthorizationCodeFlow.Initializer
+            {
+                ClientSecrets = secrets,
+                Scopes = BuildScopes(includeGmailSend: false), // minimal
+                DataStore = dataStore
+            });
+
+            var token = await flow.LoadTokenAsync(senderEmail, ct);
+            if (token == null) return false;
+            if (string.IsNullOrWhiteSpace(token.Scope)) return false;
+            var scopes = token.Scope.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            return scopes.Contains(GeminiScope, StringComparer.OrdinalIgnoreCase);
+        }
+
         private string ResolveClientSecretJson()
         {
             // 1) File path
