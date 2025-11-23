@@ -1,5 +1,5 @@
 import cronstrue from 'cronstrue'
-import { Settings, WatchTaskFull, NotificationItem } from '../../types'
+import { Settings, WatchTaskFull, NotificationItem, GmailStatus, GeminiStatus } from '../../types'
 import { formatDateTime, formatRelative } from '../../utils/format'
 import { findNextScheduledTask } from '../../utils/scheduling'
 
@@ -8,9 +8,11 @@ interface Props {
   tasks: WatchTaskFull[] | null
   notifications: NotificationItem[] | null
   loaded: boolean
+  gmailStatus: GmailStatus | null
+  geminiStatus: GeminiStatus | null
 }
 
-export default function DashboardSection({ settings, tasks, notifications, loaded }: Props) {
+export default function DashboardSection({ settings, tasks, notifications, loaded, gmailStatus, geminiStatus }: Props) {
   const totalTasks = tasks?.length || 0
   const enabledTasks = (tasks || []).filter(t => t.enabled).length
   const totalNotifs = notifications?.length || 0
@@ -56,17 +58,34 @@ export default function DashboardSection({ settings, tasks, notifications, loade
             <div className="text-xs mt-1 text-gray-600 dark:text-gray-300">{latestNotification ? 'Latest ' + formatRelative(latestNotification.sentAt) : 'None yet'}</div>
         </div>
         <div className="card">
-          <div className="text-xs text-gray-500 dark:text-gray-400">Settings</div>
-          {settings ? (
-            <div className="mt-1">
-              <span className="text-green-600 dark:text-green-400 font-medium">Configured</span>
-              <div className="text-xs text-gray-600 dark:text-gray-300 truncate" title={settings.senderEmail || undefined}>{settings.senderEmail || '(sender not set)'}</div>
-            </div>
-          ) : loaded ? (
-            <div className="mt-1">
-              <span className="text-red-600 dark:text-red-400 font-medium">Missing</span>
-              <div className="text-xs text-gray-600 dark:text-gray-300">Add settings to enable emails.</div>
-            </div>
+          <div className="text-xs text-gray-500 dark:text-gray-400">Settings & Auth</div>
+          {loaded ? (
+            settings ? (
+              <div className="mt-1 space-y-1">
+                <div className="flex items-center gap-2">
+                  {settings.notificationChannel === 'Email' && (
+                    <span className={"text-xs font-medium px-2 py-0.5 rounded-full " + (gmailStatus && gmailStatus.hasGmailScope ? 'bg-green-100 text-green-700 dark:bg-green-800 dark:text-green-200' : 'bg-amber-100 text-amber-700 dark:bg-amber-800 dark:text-amber-200')}>
+                      Gmail {gmailStatus && gmailStatus.hasGmailScope ? 'OK' : 'Missing'}
+                    </span>
+                  )}
+                  <span className={"text-xs font-medium px-2 py-0.5 rounded-full " + (geminiStatus && geminiStatus.hasGeminiScope ? 'bg-green-100 text-green-700 dark:bg-green-800 dark:text-green-200' : 'bg-amber-100 text-amber-700 dark:bg-amber-800 dark:text-amber-200')}>
+                    Gemini {geminiStatus && geminiStatus.hasGeminiScope ? 'OK' : 'Missing'}
+                  </span>
+                </div>
+                <div className="text-xs text-gray-600 dark:text-gray-300 truncate" title={settings.senderEmail || undefined}>{settings.senderEmail || '(sender not set)'}</div>
+                {settings.notificationChannel === 'Email' && gmailStatus && gmailStatus.needsReauth && (
+                  <div className="text-[10px] text-amber-600 dark:text-amber-400">Gmail re-auth required.</div>
+                )}
+                {geminiStatus && !geminiStatus.hasGeminiScope && (
+                  <div className="text-[10px] text-amber-600 dark:text-amber-400">Gemini authorization required.</div>
+                )}
+              </div>
+            ) : (
+              <div className="mt-1">
+                <span className="text-red-600 dark:text-red-400 font-medium">Missing</span>
+                <div className="text-xs text-gray-600 dark:text-gray-300">Add settings to proceed.</div>
+              </div>
+            )
           ) : (
             <div className="mt-1 text-xs text-gray-600 dark:text-gray-300">Loading…</div>
           )}

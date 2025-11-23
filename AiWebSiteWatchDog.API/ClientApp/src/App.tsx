@@ -4,16 +4,15 @@ import { toast } from 'react-hot-toast'
 import ConfirmDialog from './components/modals/ConfirmDialog'
 import { useRef } from 'react'
 import axios from 'axios'
-import { Settings, WatchTaskFull, NotificationItem, SettingsForm, NewTaskForm, EditTaskForm } from './types'
+import { Settings, WatchTaskFull, NotificationItem, SettingsForm, NewTaskForm, EditTaskForm, GmailStatus, GeminiStatus } from './types'
 import CreateTaskModal from './components/modals/CreateTaskModal'
 import EditTaskModal from './components/modals/EditTaskModal'
 // Removed AuthModal (replaced by inline AuthCard)
-import AuthCard from './components/sections/AuthCard'
 import SettingsSection from './components/sections/SettingsSection'
 import TasksSection from './components/sections/TasksSection'
 import NotificationsSection from './components/sections/NotificationsSection'
 import DashboardSection from './components/sections/DashboardSection'
-import { getSettings as svcGetSettings, updateSettings as svcUpdateSettings } from './services/settings'
+import { getSettings as svcGetSettings, updateSettings as svcUpdateSettings, getGmailStatus as svcGetGmailStatus, getGeminiStatus as svcGetGeminiStatus } from './services/settings'
 import { getTasks as svcGetTasks, createTask as svcCreateTask, updateTask as svcUpdateTask, runTask as svcRunTask, deleteTask as svcDeleteTask } from './services/tasks'
 import { getNotifications as svcGetNotifications, deleteNotification as svcDeleteNotification } from './services/notifications'
 
@@ -27,6 +26,8 @@ export default function App() {
   const [tasksError, setTasksError] = useState<string | null>(null)
   const [notifications, setNotifications] = useState<NotificationItem[] | null>(null)
   const [notificationsError, setNotificationsError] = useState<string | null>(null)
+  const [gmailStatus, setGmailStatus] = useState<GmailStatus | null>(null)
+  const [geminiStatus, setGeminiStatus] = useState<GeminiStatus | null>(null)
   const [notifDeleteMsg, setNotifDeleteMsg] = useState<string | null>(null)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const mobileMenuButtonRef = useRef<HTMLButtonElement | null>(null)
@@ -39,7 +40,10 @@ export default function App() {
     userEmail: '',
     senderEmail: '',
     senderName: '',
-    geminiApiUrl: ''
+    geminiApiUrl: '',
+    notificationChannel: 'Email',
+    telegramBotToken: '',
+    telegramChatId: ''
   })
   const [saving, setSaving] = useState(false)
   const [saveMsg, setSaveMsg] = useState<string | null>(null)
@@ -187,20 +191,26 @@ export default function App() {
             userEmail: data.userEmail || '',
             senderEmail: data.senderEmail || '',
             senderName: data.senderName || '',
-            geminiApiUrl: data.geminiApiUrl || ''
+            geminiApiUrl: data.geminiApiUrl || '',
+            notificationChannel: data.notificationChannel || 'Email',
+            telegramBotToken: data.telegramBotToken || '',
+            telegramChatId: data.telegramChatId || ''
           })
         }
         setLoaded(true)
+        loadAuthStatuses()
       })
       .catch((err: unknown) => {
         const ax = err as any
         if (axios.isAxiosError(ax) && ax.response?.status === 404) {
           setSettings(null)
           setLoaded(true)
+          loadAuthStatuses()
           return
         }
         setError((err as Error).message || String(err))
         setLoaded(true)
+        loadAuthStatuses()
       })
   }, [])
 
@@ -218,6 +228,125 @@ export default function App() {
     loadNotifications()
   }, [])
 
+  // SSE subscription for real-time updates (notifications + gmailStatus + geminiStatus)
+  useEffect(() => {
+    let stopped = false
+    let retryDelay = 1000 // start with 1s
+    let attempts = 0
+    const maxDelay = 30000
+    const maxAttemptsBeforeFallback = 6
+    let pollFallbackActive = false
+    let pollInterval: any = null
+    let es: EventSource | null = null
+
+    function scheduleReconnect() {
+      if (stopped || pollFallbackActive) return
+      attempts++
+      const nextDelay = Math.min(retryDelay * 2, maxDelay)
+      retryDelay = nextDelay
+      setTimeout(() => {
+        if (!stopped && !pollFallbackActive) connect()
+      }, retryDelay)
+      if (attempts >= maxAttemptsBeforeFallback) activatePollingFallback()
+    }
+
+    function activatePollingFallback() {
+      if (pollFallbackActive) return
+      pollFallbackActive = true
+      // Light periodic polling as a safety net (every 20s)
+      pollInterval = setInterval(() => {
+        loadNotifications()
+        loadAuthStatuses()
+      }, 20000)
+    }
+
+    function handleNotificationEvent(raw: string) {
+      try {
+        const item: NotificationItem = JSON.parse(raw)
+        setNotifications(prev => {
+          const list = prev ? [...prev] : []
+          // Deduplicate by id
+          if (!list.some(n => n.id === item.id)) list.unshift(item)
+          return list.sort((a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime())
+        })
+      } catch (e) {
+        // Ignore parse errors
+      }
+    }
+
+    function handleGmailStatusEvent(raw: string) {
+      try {
+        const status: GmailStatus = JSON.parse(raw)
+        setGmailStatus(status)
+      } catch {}
+    }
+
+    function handleGeminiStatusEvent(raw: string) {
+      try {
+        const status: GeminiStatus = JSON.parse(raw)
+        setGeminiStatus(status)
+      } catch {}
+    }
+
+    function connect() {
+      // Close previous if any
+      if (es) {
+        es.close()
+        es = null
+      }
+      try {
+        // Use absolute API base if provided via environment (e.g., VITE_API_BASE)
+        const apiBase = (import.meta.env.VITE_API_BASE as string | undefined) || ''
+        const url = apiBase ? apiBase.replace(/\/$/, '') + '/events' : '/events'
+        es = new EventSource(url)
+      } catch (e) {
+        scheduleReconnect()
+        return
+      }
+
+      es.addEventListener('notification', (ev: MessageEvent) => {
+        handleNotificationEvent(ev.data)
+      })
+      es.addEventListener('gmailStatus', (ev: MessageEvent) => {
+        handleGmailStatusEvent(ev.data)
+      })
+      es.addEventListener('geminiStatus', (ev: MessageEvent) => {
+        handleGeminiStatusEvent(ev.data)
+      })
+      es.onerror = () => {
+        // Browser will attempt auto-reconnect; we layer manual backoff for robustness
+        if (es && es.readyState === EventSource.CLOSED) {
+          scheduleReconnect()
+        } else {
+          // Force close then reconnect ourselves to control backoff
+          es?.close()
+          scheduleReconnect()
+        }
+      }
+      es.onopen = () => {
+        // Reset backoff on successful connection
+        retryDelay = 1000
+        attempts = 0
+        if (pollFallbackActive) {
+          pollFallbackActive = false
+          if (pollInterval) {
+            clearInterval(pollInterval)
+            pollInterval = null
+          }
+        }
+      }
+    }
+
+    connect()
+
+    return () => {
+      stopped = true
+      if (es) es.close()
+      if (pollInterval) clearInterval(pollInterval)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   async function loadNotifications() {
     try {
       const list = await svcGetNotifications()
@@ -227,6 +356,21 @@ export default function App() {
       const msg = (e as Error).message || String(e)
       setNotificationsError(msg)
       toast.error(`Failed to load notifications: ${msg}`)
+    }
+  }
+
+  async function loadAuthStatuses() {
+    try {
+      const g = await svcGetGmailStatus()
+      setGmailStatus(g)
+    } catch {
+      setGmailStatus(null)
+    }
+    try {
+      const gm = await svcGetGeminiStatus()
+      setGeminiStatus(gm)
+    } catch {
+      setGeminiStatus(null)
     }
   }
 
@@ -240,7 +384,10 @@ export default function App() {
         userEmail: form.userEmail,
         senderEmail: form.senderEmail,
         senderName: form.senderName,
-        geminiApiUrl: form.geminiApiUrl
+        geminiApiUrl: form.geminiApiUrl,
+        notificationChannel: form.notificationChannel,
+        telegramBotToken: form.telegramBotToken || null,
+        telegramChatId: form.telegramChatId || null
       }
       await svcUpdateSettings(payload)
       // Refresh settings from server
@@ -250,8 +397,12 @@ export default function App() {
         userEmail: latest.userEmail || '',
         senderEmail: latest.senderEmail || '',
         senderName: latest.senderName || '',
-        geminiApiUrl: latest.geminiApiUrl || ''
+        geminiApiUrl: latest.geminiApiUrl || '',
+        notificationChannel: latest.notificationChannel || 'Email',
+        telegramBotToken: latest.telegramBotToken || '',
+        telegramChatId: latest.telegramChatId || ''
       })
+      await loadAuthStatuses()
       setSaveMsg('Settings saved')
       toast.success('Settings saved', { id: toastId })
       return true
@@ -604,21 +755,23 @@ export default function App() {
             tasks={tasks}
             notifications={notifications}
             loaded={loaded}
+            gmailStatus={gmailStatus}
+            geminiStatus={geminiStatus}
           />
         )}
 
         {activeTab === 'settings' && (
-          <>
-            <SettingsSection
-              settings={settings}
-              loaded={loaded}
-              form={form}
-              setForm={setForm}
-              saving={saving}
-              onSave={saveSettings}
-            />
-            <AuthCard settings={settings} />
-          </>
+          <SettingsSection
+            settings={settings}
+            loaded={loaded}
+            form={form}
+            setForm={setForm}
+            gmailStatus={gmailStatus}
+            geminiStatus={geminiStatus}
+            saving={saving}
+            refreshAuthStatuses={loadAuthStatuses}
+            onSaveAll={saveSettings}
+          />
         )}
 
         {activeTab === 'tasks' && (

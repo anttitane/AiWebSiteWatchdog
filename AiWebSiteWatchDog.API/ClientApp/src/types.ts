@@ -24,15 +24,20 @@ export type NotificationItem = {
   sentAt: string
 }
 
+export type NotificationChannel = 'Email' | 'Telegram'
+
 export type Settings = {
   userEmail: string
   senderEmail: string
   senderName: string
   geminiApiUrl: string
+  notificationChannel: NotificationChannel
+  telegramBotToken?: string | null
+  telegramChatId?: string | null
   watchTasks: WatchTask[]
 }
 
-export type SettingsForm = Pick<Settings, 'userEmail' | 'senderEmail' | 'senderName' | 'geminiApiUrl'>
+export type SettingsForm = Pick<Settings, 'userEmail' | 'senderEmail' | 'senderName' | 'geminiApiUrl' | 'notificationChannel' | 'telegramBotToken' | 'telegramChatId'>
 
 export type NewTaskForm = {
   title: string
@@ -43,3 +48,16 @@ export type NewTaskForm = {
 }
 
 export type EditTaskForm = Partial<Pick<WatchTaskFull, 'title' | 'url' | 'taskPrompt' | 'schedule' | 'enabled'>>
+
+export type GmailStatus = {
+  configured: boolean
+  channel: NotificationChannel | null
+  hasGmailScope: boolean
+  needsReauth: boolean
+}
+
+export type GeminiStatus = {
+  configured: boolean
+  hasGeminiScope: boolean
+  needsReauth: boolean
+}

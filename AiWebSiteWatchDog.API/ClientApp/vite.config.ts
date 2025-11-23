@@ -32,6 +32,12 @@ export default defineConfig({
         target: 'http://localhost:5050',
         changeOrigin: true,
         secure: false
+      },
+      // SSE events stream
+      '/events': {
+        target: 'http://localhost:5050',
+        changeOrigin: true,
+        secure: false
       }
     }
   },
