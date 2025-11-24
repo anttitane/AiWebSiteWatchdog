@@ -567,6 +567,7 @@ namespace AiWebSiteWatchDog.API
             .WithTags("auth")
             .WithDescription("OAuth2 callback endpoint to complete Google consent and persist tokens.")
             .DisableRateLimiting();
+            
             // SSE events endpoint (notifications + gmailStatus + geminiStatus). One stream per client.
             app.MapGet("/events", async (HttpContext ctx,
                                           [FromServices] AiWebSiteWatchDog.Infrastructure.Events.SseEventPublisher sse,
@@ -574,7 +575,7 @@ namespace AiWebSiteWatchDog.API
             {
                 ctx.Response.Headers.Add("Content-Type", "text/event-stream");
                 ctx.Response.Headers.Add("Cache-Control", "no-cache");
-                var reader = sse.Reader;
+                var (subId, reader) = sse.Subscribe();
                 while (!ct.IsCancellationRequested)
                 {
                     try
@@ -593,6 +594,7 @@ namespace AiWebSiteWatchDog.API
                         break;
                     }
                 }
+                sse.Unsubscribe(subId);
             })
             .WithTags("Events")
             .WithDescription("Server-Sent Events stream for notifications and Gmail/Gemini auth status.")
