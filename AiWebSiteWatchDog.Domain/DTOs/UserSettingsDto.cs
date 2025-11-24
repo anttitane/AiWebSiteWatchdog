@@ -8,7 +8,7 @@ namespace AiWebSiteWatchDog.Domain.DTOs
         string SenderName,
         string GeminiApiUrl,
         string NotificationChannel,
-        string? TelegramBotToken,
+        string? MaskedTelegramBotToken,
         string? TelegramChatId,
         IReadOnlyCollection<WatchTaskSummaryDto> WatchTasks);
 

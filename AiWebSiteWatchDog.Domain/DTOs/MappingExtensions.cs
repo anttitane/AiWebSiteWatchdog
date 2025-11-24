@@ -11,13 +11,21 @@ namespace AiWebSiteWatchDog.Domain.DTOs
         public static WatchTaskSummaryDto ToSummaryDto(this WatchTask task) =>
             new(task.Id, task.Title, task.Url, task.Schedule, task.Enabled);
 
+        private static string? MaskToken(string? token)
+        {
+            if (string.IsNullOrWhiteSpace(token)) return null;
+            var keep = 6; // show last 6 characters for identification
+            if (token.Length <= keep) return token; // very short token; show as-is
+            return new string('*', token.Length - keep) + token[^keep..];
+        }
+
         public static UserSettingsDto ToDto(this UserSettings settings) =>
             new(settings.UserEmail,
                 settings.SenderEmail,
                 settings.SenderName,
                 settings.GeminiApiUrl,
                 settings.NotificationChannel.ToString(),
-                settings.TelegramBotToken,
+                MaskToken(settings.TelegramBotToken),
                 settings.TelegramChatId,
                 settings.WatchTasks.Select(t => t.ToSummaryDto()).ToList());
 

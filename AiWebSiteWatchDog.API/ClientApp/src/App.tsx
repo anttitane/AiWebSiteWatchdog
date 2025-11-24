@@ -193,8 +193,8 @@ export default function App() {
             senderName: data.senderName || '',
             geminiApiUrl: data.geminiApiUrl || '',
             notificationChannel: data.notificationChannel || 'Email',
-            telegramBotToken: data.telegramBotToken || '',
-            telegramChatId: data.telegramChatId || ''
+            telegramChatId: data.telegramChatId || '',
+            telegramBotToken: '' // raw token never returned; user must re-enter to replace
           })
         }
         setLoaded(true)
@@ -399,8 +399,8 @@ export default function App() {
         senderName: latest.senderName || '',
         geminiApiUrl: latest.geminiApiUrl || '',
         notificationChannel: latest.notificationChannel || 'Email',
-        telegramBotToken: latest.telegramBotToken || '',
-        telegramChatId: latest.telegramChatId || ''
+        telegramChatId: latest.telegramChatId || '',
+        telegramBotToken: ''
       })
       await loadAuthStatuses()
       setSaveMsg('Settings saved')

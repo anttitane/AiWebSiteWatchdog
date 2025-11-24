@@ -24,8 +24,9 @@ export default function NotificationSettingsCard({ settings, loaded, form, setFo
         senderName: settings.senderName || '',
         geminiApiUrl: settings.geminiApiUrl || '',
         notificationChannel: settings.notificationChannel || 'Email',
-        telegramBotToken: settings.telegramBotToken || '',
-        telegramChatId: settings.telegramChatId || ''
+        telegramChatId: settings.telegramChatId || '',
+        // token not returned; leave empty
+        telegramBotToken: ''
       })
     }
   }, [settings, editing, setForm])
@@ -44,8 +45,8 @@ export default function NotificationSettingsCard({ settings, loaded, form, setFo
         senderName: settings.senderName || '',
         geminiApiUrl: settings.geminiApiUrl || '',
         notificationChannel: settings.notificationChannel || 'Email',
-        telegramBotToken: settings.telegramBotToken || '',
-        telegramChatId: settings.telegramChatId || ''
+        telegramChatId: settings.telegramChatId || '',
+        telegramBotToken: ''
       })
     }
     setEditing(false)
@@ -208,40 +209,59 @@ export default function NotificationSettingsCard({ settings, loaded, form, setFo
         )}
         {channelIsTelegram && (
           <>
-            <label className={"text-sm flex flex-col relative " + (changed.telegramBotToken ? 'after:absolute after:-right-2 after:top-2 after:w-2 after:h-2 after:rounded-full after:bg-amber-400' : '')}>
-              <span className="text-gray-700 dark:text-gray-200 flex items-center gap-1">
-                Telegram Bot Token {changed.telegramBotToken && <span className="text-amber-600 dark:text-amber-400 text-[10px] font-medium">Changed</span>}
-              </span>
-              <input
-                className={
-                  "modal-input font-mono text-xs transition-colors " +
-                  (editing ? '' : 'bg-gray-50 text-gray-600 border border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-500') +
-                  (changed.telegramBotToken ? ' ring-2 ring-amber-300 dark:ring-amber-500' : '')
-                }
-                type="text"
-                value={form.telegramBotToken || ''}
-                onChange={e => setForm(f => ({ ...f, telegramBotToken: e.target.value }))}
-                placeholder="123456789:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
-                disabled={saving || !editing}
-              />
-            </label>
-            <label className={"text-sm flex flex-col relative " + (changed.telegramChatId ? 'after:absolute after:-right-2 after:top-2 after:w-2 after:h-2 after:rounded-full after:bg-amber-400' : '')}>
-              <span className="text-gray-700 dark:text-gray-200 flex items-center gap-1">
-                Telegram Chat ID {changed.telegramChatId && <span className="text-amber-600 dark:text-amber-400 text-[10px] font-medium">Changed</span>}
-              </span>
-              <input
-                className={
-                  "modal-input font-mono text-xs transition-colors " +
-                  (editing ? '' : 'bg-gray-50 text-gray-600 border border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-500') +
-                  (changed.telegramChatId ? ' ring-2 ring-amber-300 dark:ring-amber-500' : '')
-                }
-                type="text"
-                value={form.telegramChatId || ''}
-                onChange={e => setForm(f => ({ ...f, telegramChatId: e.target.value }))}
-                placeholder="123456789"
-                disabled={saving || !editing}
-              />
-            </label>
+            {editing ? (
+              <label className={"text-sm flex flex-col relative " + (changed.telegramBotToken ? 'after:absolute after:-right-2 after:top-2 after:w-2 after:h-2 after:rounded-full after:bg-amber-400' : '')}>
+                <span className="text-gray-700 dark:text-gray-200 flex items-center gap-1">
+                  Telegram Bot Token {changed.telegramBotToken && <span className="text-amber-600 dark:text-amber-400 text-[10px] font-medium">Changed</span>}
+                </span>
+                <input
+                  className={
+                    "modal-input font-mono text-xs transition-colors " +
+                    (editing ? '' : 'bg-gray-50 text-gray-600 border border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-500') +
+                    (changed.telegramBotToken ? ' ring-2 ring-amber-300 dark:ring-amber-500' : '')
+                  }
+                  type="text"
+                  value={form.telegramBotToken || ''}
+                  onChange={e => setForm(f => ({ ...f, telegramBotToken: e.target.value }))}
+                  placeholder="Enter new bot token to replace stored one"
+                  disabled={saving || !editing}
+                />
+                <span className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">Bot token is stored securely; you must re-enter a new one to change it.</span>
+              </label>
+            ) : (
+              <div className="flex flex-col">
+                <span className="text-xs font-medium text-gray-600 dark:text-gray-300">Telegram Bot Token</span>
+                <div className="mt-1 px-3 py-2 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs font-mono text-gray-700 dark:text-gray-200">
+                  {settings?.maskedTelegramBotToken || <span className="italic text-gray-400">(none)</span>}
+                </div>
+              </div>
+            )}
+            {editing ? (
+              <label className={"text-sm flex flex-col relative " + (changed.telegramChatId ? 'after:absolute after:-right-2 after:top-2 after:w-2 after:h-2 after:rounded-full after:bg-amber-400' : '')}>
+                <span className="text-gray-700 dark:text-gray-200 flex items-center gap-1">
+                  Telegram Chat ID {changed.telegramChatId && <span className="text-amber-600 dark:text-amber-400 text-[10px] font-medium">Changed</span>}
+                </span>
+                <input
+                  className={
+                    "modal-input font-mono text-xs transition-colors " +
+                    (editing ? '' : 'bg-gray-50 text-gray-600 border border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-500') +
+                    (changed.telegramChatId ? ' ring-2 ring-amber-300 dark:ring-amber-500' : '')
+                  }
+                  type="text"
+                  value={form.telegramChatId || ''}
+                  onChange={e => setForm(f => ({ ...f, telegramChatId: e.target.value }))}
+                  placeholder="123456789"
+                  disabled={saving || !editing}
+                />
+              </label>
+            ) : (
+              <div className="flex flex-col">
+                <span className="text-xs font-medium text-gray-600 dark:text-gray-300">Telegram Chat ID</span>
+                <div className="mt-1 px-3 py-2 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs font-mono text-gray-700 dark:text-gray-200">
+                  {settings?.telegramChatId || <span className="italic text-gray-400">(none)</span>}
+                </div>
+              </div>
+            )}
           </>
         )}
         {!canSave && editing && (
@@ -268,7 +288,7 @@ export default function NotificationSettingsCard({ settings, loaded, form, setFo
                   const gmailAuthorized = gmailStatus && gmailStatus.configured && gmailStatus.hasGmailScope && !gmailStatus.needsReauth
                   return !(settings.senderEmail && settings.userEmail && gmailAuthorized)
                 } else if (settings.notificationChannel === 'Telegram') {
-                  return !(settings.telegramBotToken && settings.telegramChatId)
+                  return !(settings.maskedTelegramBotToken && settings.telegramChatId)
                 }
                 return true
               })()}
