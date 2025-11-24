@@ -78,7 +78,7 @@ public class GeminiApiClientTests
         var credential = CreateFakeCredential();
 
         var credProvider = new Mock<IGoogleCredentialProvider>();
-        credProvider.Setup(c => c.GetGmailAndGeminiCredentialAsync("sender@example.com", default)).ReturnsAsync(credential);
+        credProvider.Setup(c => c.GetCredentialAsync("sender@example.com", false, default)).ReturnsAsync(credential);
 
         var settingsSvc = new Mock<ISettingsService>();
         var settings = new UserSettings("user@example.com", "sender@example.com", "Sender")
@@ -104,7 +104,7 @@ public class GeminiApiClientTests
         var credential = CreateFakeCredential();
 
         var credProvider = new Mock<IGoogleCredentialProvider>();
-        credProvider.Setup(c => c.GetGmailAndGeminiCredentialAsync("sender@example.com", default)).ReturnsAsync(credential);
+        credProvider.Setup(c => c.GetCredentialAsync("sender@example.com", false, default)).ReturnsAsync(credential);
 
         var settingsSvc = new Mock<ISettingsService>();
         var settings = new UserSettings("user@example.com", "sender@example.com", "Sender")
