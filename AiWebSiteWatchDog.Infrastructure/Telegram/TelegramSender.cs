@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using System.Collections.Concurrent;
 using AiWebSiteWatchDog.Domain.Entities;
 using AiWebSiteWatchDog.Domain.Interfaces;
 using Serilog;
@@ -76,6 +77,8 @@ namespace AiWebSiteWatchDog.Infrastructure.Telegram
             }
         }
 
+        private static readonly ConcurrentDictionary<string, TelegramBotClient> _clientCache = new();
+
         public async Task SendAsync(Notification notification, UserSettings settings, string? chatIdOverride = null)
         {
             if (settings.NotificationChannel != NotificationChannel.Telegram)
@@ -90,7 +93,7 @@ namespace AiWebSiteWatchDog.Infrastructure.Telegram
 
             try
             {
-                var client = new TelegramBotClient(botToken);
+                var client = _clientCache.GetOrAdd(botToken, t => new TelegramBotClient(t));
                 var raw = $"{notification.Subject}\n\n{notification.Message}".Trim();
                 var escaped = EscapeMarkdownV2(raw);
                 var chunks = ChunkEscaped(escaped);
