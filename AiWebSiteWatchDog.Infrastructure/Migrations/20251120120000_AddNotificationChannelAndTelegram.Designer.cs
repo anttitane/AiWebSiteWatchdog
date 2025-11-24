@@ -91,7 +91,7 @@ namespace AiWebSiteWatchDog.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>(("TaskPrompt"))
+                    b.Property<string>("TaskPrompt")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
