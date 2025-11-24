@@ -6,12 +6,84 @@ using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using Microsoft.Extensions.Caching.Memory;
 using AiWebSiteWatchDog.Domain.Constants;
+using Microsoft.Extensions.Configuration;
+using System;
+using AiWebSiteWatchDog.Infrastructure.Auth;
 
 namespace AiWebSiteWatchDog.Infrastructure.Persistence
 {
-    public class SQLiteSettingsRepository(AppDbContext _dbContext, IMemoryCache cache) : ISettingsRepository
+    public class SQLiteSettingsRepository : ISettingsRepository
     {
-        private readonly IMemoryCache _cache = cache;
+        private readonly AppDbContext _dbContext;
+        private readonly IMemoryCache _cache;
+        private readonly bool _encryptionEnabled;
+        private readonly byte[]? _encryptionKey;
+
+        public SQLiteSettingsRepository(AppDbContext dbContext, IMemoryCache cache, IConfiguration configuration)
+        {
+            _dbContext = dbContext;
+            _cache = cache;
+            try
+            {
+                var keyB64 = Environment.GetEnvironmentVariable("TELEGRAM_TOKENS_ENCRYPTION_KEY")
+                    ?? Environment.GetEnvironmentVariable("GOOGLE_TOKENS_ENCRYPTION_KEY")
+                    ?? configuration["TELEGRAM_TOKENS_ENCRYPTION_KEY"]
+                    ?? configuration["GOOGLE_TOKENS_ENCRYPTION_KEY"];
+                if (!string.IsNullOrWhiteSpace(keyB64))
+                {
+                    var raw = Convert.FromBase64String(keyB64.Trim());
+                    if (raw.Length is 16 or 24 or 32)
+                    {
+                        _encryptionKey = raw;
+                        _encryptionEnabled = true;
+                        Log.Information("TelegramBotToken encryption enabled (AES-{Size} bytes).", raw.Length);
+                    }
+                    else
+                    {
+                        Log.Warning("Encryption key length {Length} invalid for AES; expected 16/24/32. TelegramBotToken encryption disabled.", raw.Length);
+                        _encryptionEnabled = false;
+                    }
+                }
+                else
+                {
+                    _encryptionEnabled = false;
+                    Log.Information("No encryption key found; TelegramBotToken stored in plaintext. Set TELEGRAM_TOKENS_ENCRYPTION_KEY or GOOGLE_TOKENS_ENCRYPTION_KEY to enable.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Failed to initialize TelegramBotToken encryption; storing plaintext.");
+                _encryptionEnabled = false;
+            }
+        }
+
+        private string? Encrypt(string? plain)
+        {
+            if (!_encryptionEnabled || string.IsNullOrWhiteSpace(plain)) return plain;
+            try
+            {
+                return EncryptionHelper.Encrypt(plain, _encryptionKey!);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Failed to encrypt TelegramBotToken");
+                return plain; // fallback store plaintext
+            }
+        }
+
+        private string? Decrypt(string? cipher)
+        {
+            if (!_encryptionEnabled || string.IsNullOrWhiteSpace(cipher)) return cipher;
+            try
+            {
+                return EncryptionHelper.Decrypt(cipher, _encryptionKey!);
+            }
+            catch
+            {
+                // If decryption fails treat as plaintext (legacy row or key rotation mismatch)
+                return cipher;
+            }
+        }
         public async Task<UserSettings> LoadAsync()
         {
             try
@@ -46,6 +118,11 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
                 {
                     settings.GeminiApiUrl = GeminiDefaults.ApiUrl;
                 }
+                // Decrypt TelegramBotToken if encrypted
+                if (!string.IsNullOrWhiteSpace(settings.TelegramBotToken))
+                {
+                    settings.TelegramBotToken = Decrypt(settings.TelegramBotToken);
+                }
                 Log.Information("Settings loaded successfully from database.");
                 _cache.Set(SettingsCacheKeys.UserSettingsSingleton, settings);
                 return settings;
@@ -67,33 +144,40 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
                     .FirstOrDefaultAsync();
                 if (existing == null)
                 {
-                    await _dbContext.UserSettings.AddAsync(settings);
+                    var toAdd = new UserSettings(settings.UserEmail, settings.SenderEmail, settings.SenderName)
+                    {
+                        GeminiApiUrl = string.IsNullOrWhiteSpace(settings.GeminiApiUrl) ? GeminiDefaults.ApiUrl : settings.GeminiApiUrl,
+                        NotificationChannel = settings.NotificationChannel,
+                        TelegramBotToken = Encrypt(settings.TelegramBotToken),
+                        TelegramChatId = settings.TelegramChatId,
+                        WatchTasks = settings.WatchTasks
+                    };
+                    await _dbContext.UserSettings.AddAsync(toAdd);
+                    existing = toAdd;
                 }
                 else
                 {
-                    // If primary key (UserEmail) changes, propagate to related WatchTasks
                     if (existing.UserEmail != settings.UserEmail)
                     {
                         var oldKey = existing.UserEmail;
                         var tasks = await _dbContext.WatchTasks.Where(w => w.UserSettingsId == oldKey).ToListAsync();
-                        foreach (var t in tasks)
-                        {
-                            t.UserSettingsId = settings.UserEmail;
-                        }
-                        existing.UserEmail = settings.UserEmail; // update PK after FKs adjusted
+                        foreach (var t in tasks) t.UserSettingsId = settings.UserEmail;
+                        existing.UserEmail = settings.UserEmail;
                     }
                     existing.SenderEmail = settings.SenderEmail;
                     existing.SenderName = settings.SenderName;
-                    existing.GeminiApiUrl = string.IsNullOrWhiteSpace(settings.GeminiApiUrl)
-                        ? GeminiDefaults.ApiUrl
-                        : settings.GeminiApiUrl;
+                    existing.GeminiApiUrl = string.IsNullOrWhiteSpace(settings.GeminiApiUrl) ? GeminiDefaults.ApiUrl : settings.GeminiApiUrl;
                     existing.NotificationChannel = settings.NotificationChannel;
-                    existing.TelegramBotToken = settings.TelegramBotToken;
+                    existing.TelegramBotToken = Encrypt(settings.TelegramBotToken);
                     existing.TelegramChatId = settings.TelegramChatId;
                 }
                 await _dbContext.SaveChangesAsync();
-                // Update cache after save
-                _cache.Set(SettingsCacheKeys.UserSettingsSingleton, existing ?? settings);
+                // After persistence, ensure plaintext token for runtime use
+                if (existing != null && _encryptionEnabled && !string.IsNullOrWhiteSpace(settings.TelegramBotToken))
+                {
+                    existing.TelegramBotToken = settings.TelegramBotToken;
+                }
+                _cache.Set(SettingsCacheKeys.UserSettingsSingleton, existing);
                 Log.Information("Settings saved successfully to database.");
             }
             catch (System.Exception ex)
