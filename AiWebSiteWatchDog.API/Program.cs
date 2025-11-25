@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using AiWebSiteWatchDog.API.Jobs;
 using Microsoft.AspNetCore.HttpOverrides;
 using AiWebSiteWatchDog.API.Configuration;
+using System.Text.Json.Serialization;
 
 // Serilog will be configured from appsettings.json via UseSerilog below so
 // logging configuration can be adjusted without recompiling.
@@ -83,6 +84,12 @@ var defaultConn = builder.Configuration.GetConnectionString("DefaultConnection")
 builder.Services.AddDbContext<AiWebSiteWatchDog.Infrastructure.Persistence.AppDbContext>(options =>
     options.UseSqlite(defaultConn));
 
+// Ensure enums are serialized/deserialized as strings for Minimal APIs
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+});
+
 // Add in-memory cache for settings caching
 builder.Services.AddMemoryCache();
 
@@ -95,7 +102,9 @@ builder.Services.AddScoped<INotificationRepository, AiWebSiteWatchDog.Infrastruc
 builder.Services.AddScoped<AiWebSiteWatchDog.Infrastructure.Persistence.WatchTaskRepository>();
 builder.Services.AddScoped<AiWebSiteWatchDog.Infrastructure.Auth.IGoogleCredentialProvider, AiWebSiteWatchDog.Infrastructure.Auth.GoogleCredentialProvider>();
 builder.Services.AddScoped<IEmailSender, AiWebSiteWatchDog.Infrastructure.Email.EmailSender>();
+builder.Services.AddScoped<ITelegramSender, AiWebSiteWatchDog.Infrastructure.Telegram.TelegramSender>();
 builder.Services.AddHttpClient<IGeminiApiClient, AiWebSiteWatchDog.Infrastructure.Gemini.GeminiApiClient>();
+builder.Services.AddSingleton<AiWebSiteWatchDog.Infrastructure.Events.SseEventPublisher>();
 
 // Register application services
 builder.Services.AddScoped<ISettingsService, AiWebSiteWatchDog.Application.Services.SettingsService>();

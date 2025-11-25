@@ -16,6 +16,7 @@ public class NotificationServiceTests
     public async Task SendNotificationAsync_SendsEmailAndPersistsNotification()
     {
         var emailSender = new Mock<IEmailSender>();
+        var telegramSender = new Mock<ITelegramSender>();
         var settingsService = new Mock<ISettingsService>();
         var repo = new Mock<INotificationRepository>();
 
@@ -26,7 +27,8 @@ public class NotificationServiceTests
                    .Returns(Task.CompletedTask)
                    .Verifiable();
 
-        var svc = new NotificationService(emailSender.Object, settingsService.Object, repo.Object);
+        var logger = new Mock<Microsoft.Extensions.Logging.ILogger<NotificationService>>();
+        var svc = new NotificationService(logger.Object, emailSender.Object, telegramSender.Object, settingsService.Object, repo.Object);
         var dto = await svc.SendNotificationAsync(new CreateNotificationRequest("Subject", "Message"));
 
         dto.Subject.Should().Be("Subject");
@@ -40,17 +42,20 @@ public class NotificationServiceTests
     public async Task SendNotificationAsync_Throws_WhenSenderEmailMissing()
     {
         var emailSender = new Mock<IEmailSender>();
+        var telegramSender = new Mock<ITelegramSender>();
         var settingsService = new Mock<ISettingsService>();
         var repo = new Mock<INotificationRepository>();
         settingsService.Setup(s => s.GetSettingsAsync()).ReturnsAsync(new UserSettings("user@example.com", "  ", "S"));
-        var svc = new NotificationService(emailSender.Object, settingsService.Object, repo.Object);
-        await Assert.ThrowsAsync<ArgumentNullException>(() => svc.SendNotificationAsync(new CreateNotificationRequest("s", "m")));
+        var logger = new Mock<Microsoft.Extensions.Logging.ILogger<NotificationService>>();
+        var svc = new NotificationService(logger.Object, emailSender.Object, telegramSender.Object, settingsService.Object, repo.Object);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => svc.SendNotificationAsync(new CreateNotificationRequest("s", "m")));
     }
 
     [Fact]
     public async Task SendNotificationAsync_WhenEmailSendFails_DoesNotPersistAndBubbles()
     {
         var emailSender = new Mock<IEmailSender>();
+        var telegramSender = new Mock<ITelegramSender>();
         var settingsService = new Mock<ISettingsService>();
         var repo = new Mock<INotificationRepository>();
 
@@ -61,7 +66,8 @@ public class NotificationServiceTests
             .Setup(e => e.SendAsync(It.IsAny<Notification>(), settings, settings.UserEmail))
             .ThrowsAsync(new InvalidOperationException("smtp-fail"));
 
-        var svc = new NotificationService(emailSender.Object, settingsService.Object, repo.Object);
+        var logger = new Mock<Microsoft.Extensions.Logging.ILogger<NotificationService>>();
+        var svc = new NotificationService(logger.Object, emailSender.Object, telegramSender.Object, settingsService.Object, repo.Object);
         await Assert.ThrowsAsync<InvalidOperationException>(() => svc.SendNotificationAsync(new CreateNotificationRequest("s", "m")));
         repo.Verify(r => r.AddAsync(It.IsAny<Notification>()), Times.Never);
     }

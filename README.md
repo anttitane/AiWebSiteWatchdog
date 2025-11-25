@@ -4,7 +4,7 @@
 Have you ever needed to check a website regularly to see if something relevant has been posted? I have. This project began when my hometown surprised residents by adding parking restriction signs on our street. The change was recorded in the city council minutes, but I hadn’t noticed them. Manually scanning the large volume of meeting minutes is time-consuming and needs to be done regularly. This application automates that work and notifies you when meeting minutes (or other monitored pages) contain items of interest.
 
 ### Overview
-AiWebSiteWatchdog periodically scans configured websites and alerts you when content matches your interests. You describe what you care about in plain English (a natural‑language prompt), and the built‑in AI (Gemini) reads the page and decides if it’s relevant—no regexes or anything complicated required. Under the hood it uses Hangfire for scheduling, EF Core + SQLite for persistence, the Google Gemini generative API for content extraction/analysis, and Gmail API for notifications.
+AiWebSiteWatchdog periodically scans configured websites and alerts you when content matches your interests. You describe what you care about in plain English (a natural‑language prompt), and the built‑in AI (Gemini) reads the page and decides if it’s relevant—no regexes or anything complicated required. Under the hood it uses Hangfire for scheduling, EF Core + SQLite for persistence, the Google Gemini generative API for content extraction/analysis, and Gmail API or Telegram for notifications.
 
 The project also includes a lightweight single‑page application (SPA) built with React + TypeScript + Vite. In development, the UI runs on the Vite dev server (default http://localhost:5173) and proxies API calls to the backend (default http://localhost:5050). In production, the UI is prebuilt and served as static files by the ASP.NET Core app (Kestrel) from `wwwroot`.
 
@@ -21,7 +21,7 @@ The project also includes a lightweight single‑page application (SPA) built wi
 - Clean architecture
 
 #### Frontend
-- Stack: React 18 + TypeScript + Vite in `AiWebSiteWatchDog.API/ClientApp`
+- Stack: React 18 + TypeScript + Vite + Tailwind CSS in `AiWebSiteWatchDog.API/ClientApp`
 - HTTP client: Axios with a shared `api` instance and small `services/` layer (`settings`, `tasks`, `notifications`)
 - Dev server: Vite on port 5173 with proxy to the API on 5050 (configurable); optional `VITE_BACKEND_URL` for absolute base URL
 - Build & hosting: `vite build` output is copied to `wwwroot` and served by Kestrel; Docker multi‑stage build includes the frontend
@@ -37,15 +37,16 @@ This app uses the Gmail and Gemini API via Google Cloud and OAuth2 for secure em
 - **Google Cloud Controls:** All credentials are managed in Google Cloud Console, which provides strong security and access controls.
 - **Token Storage:** Access tokens are stored securely and can be revoked by you at any time in your Google account settings.
 - **API Scopes:** The app only requests the minimum required scope (`Send email on your behalf` and `Use Gemini models with your personal quota`), limiting what it can do with your account.
+	- Gmail scope is not needed if you use only Telegram for notifications.
 
 This means only authorized users can send email, credentials are never exposed, and Google’s infrastructure protects both authentication and email delivery.
 
 
-To send email using the Gmail API, you need a Google OAuth2 client_secret.json file. Follow these steps:
+To use Gemini API (mandatory) and send email using the Gmail API (optional), you need a Google OAuth2 client_secret.json file. Follow these steps:
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com/).
 2. Create a new project (or select an existing one).
-3. In the left menu, go to "APIs & Services" > "Library" and search for "Gmail API". Click "Enable". Do same for "Gemini API".
+3. In the left menu, go to "APIs & Services" > "Library" and search for "Gemini API". Click "Enable". Do same for "Gmail API" if you plan to use email notifications. 
 4. Go to "APIs & Services" > "Credentials".
 5. Click "Create Credentials" > "OAuth client ID".
 6. If prompted, configure the consent screen (fill in required fields).
@@ -60,10 +61,11 @@ To send email using the Gmail API, you need a Google OAuth2 client_secret.json f
 **Important:**
 - If your OAuth consent screen is in testing mode, you must add your Google account as a test user in the "Test users" section of the consent screen (found in the audience tab).
 	- If your OAuth consent screen is not “In production”, tokens time out on or shortly after day 7 and you need to re-authenticate. 
+	- This is inconvenient in production.
 - Alternatively, you can publish the app to make it available to all users in your organization or publicly.
-	- This app uses sensitive scope (Gmail). This means that you need to send your Google OAuth app for verification. 
+	- This app uses sensitive scope (Gmail) when using email notification channel. This means that you need to send your Google OAuth app for verification. 
 	- If you have a Google Workspace domain: set the consent screen User Type to Internal. Internal apps don’t expire tokens and never show the unverified warning to domain users (you).
-- The app requests both Gmail send and Gemini (Generative Language) scopes using a single combined consent; if scopes change later you must re-consent (delete stored token row / token files).
+- The app requests both Gmail send (if used) and Gemini (Generative Language) scopes using a single combined consent; if scopes change later you must re-consent (delete stored token row / token files).
 
 ### 2. Running the Application
 **Security note:
@@ -145,18 +147,29 @@ services:
 			- /etc/timezone:/etc/timezone:ro
 ```
 
-### 3. Configuring
+### 3. Getting Telegram Token and ID
+
+#### Create a Telegram bot and get Bot Token
+
+- Open Telegram
+- Search for `@BotFather`
+- Run `/newbot`
+- BotFather gives you a Bot Token, like: `123456789:ABC-DEF1234ghIkl-zyx57W2v1u123ew11`
+
+#### Get your chat ID
+- Send a message to your bot, then visit this URL in your browser: `https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates`
+- Look for: `"chat": { "id": 123456789 }`
+- That number is your chatId.
+
+### 4. Configuring
 
 Once running:
 - User interface: http://localhost:8080
-- Swagger UI: http://localhost:8080/swagger
-- Health: http://localhost:8080/health
-- Hangfire Dashboard: http://localhost:8080/hangfire
 
 Configuring:
 - Add your settings
 - Authorize Google. 
-	- **Note:** Do this on your server using a web browser (this must be done on a server that has a graphical desktop) and give consent to scopes (Gmail send + Gemini). You need to do this only once. Note that it's not possible to complete the consent flow from another PC (than your server) even on your local network. 
+	- **Note:** Do this on your server using a web browser (this must be done on a server that has a graphical desktop) and give consent to scopes (Gemini + optionally Gmail send). You need to do this only once. Note that it's not possible to complete the consent flow from another PC (than your server) even on your local network. 
 - Create tasks
 
 ## Development instructions

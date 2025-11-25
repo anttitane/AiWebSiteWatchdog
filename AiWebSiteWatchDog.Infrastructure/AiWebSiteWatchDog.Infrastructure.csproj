@@ -17,6 +17,7 @@
     <ProjectReference Include="../AiWebSiteWatchDog.Application/AiWebSiteWatchDog.Application.csproj" />
     <PackageReference Include="Hangfire.AspNetCore" />
     <PackageReference Include="Serilog" />
+    <PackageReference Include="Telegram.Bot" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Migrations\" />

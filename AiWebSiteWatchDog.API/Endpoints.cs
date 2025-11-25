@@ -32,9 +32,51 @@ namespace AiWebSiteWatchDog.API
             .Produces<UserSettingsDto>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status404NotFound);
 
-            app.MapPut("/settings", async ([FromServices] ISettingsService settingsService, UserSettings settings) =>
+            app.MapPut("/settings", async ([FromServices] ISettingsService settingsService,
+                                              [FromServices] Infrastructure.Auth.IGoogleCredentialProvider credentialProvider,
+                                              [FromServices] AiWebSiteWatchDog.Infrastructure.Events.SseEventPublisher sse,
+                                              UserSettings settings) =>
             {
+                // Basic validation depending on notification channel
+                var errors = new Dictionary<string, string[]>();
+                if (settings.NotificationChannel == NotificationChannel.Email)
+                {
+                    if (string.IsNullOrWhiteSpace(settings.SenderEmail)) errors["SenderEmail"] = ["SenderEmail is required for Email channel."];
+                    if (string.IsNullOrWhiteSpace(settings.SenderName)) errors["SenderName"] = ["SenderName is required for Email channel."];
+                }
+                else if (settings.NotificationChannel == NotificationChannel.Telegram)
+                {
+                    if (string.IsNullOrWhiteSpace(settings.TelegramBotToken)) errors["TelegramBotToken"] = ["TelegramBotToken is required for Telegram channel."];
+                    if (string.IsNullOrWhiteSpace(settings.TelegramChatId)) errors["TelegramChatId"] = ["TelegramChatId is required for Telegram channel."];
+                }
+                if (errors.Count > 0) return Results.ValidationProblem(errors);
+
                 await settingsService.SaveSettingsAsync(settings);
+                // After save, publish updated gmail status (may have switched channels)
+                var current = await settingsService.GetSettingsAsync();
+                if (current is not null)
+                {
+                    bool hasScope = false;
+                    if (!string.IsNullOrWhiteSpace(current.SenderEmail))
+                    {
+                        try { hasScope = await credentialProvider.HasGmailSendScopeAsync(current.SenderEmail); } catch { hasScope = false; }
+                    }
+                    bool needsReauth = current.NotificationChannel == NotificationChannel.Email && !hasScope;
+                    sse.Publish("gmailStatus", new { configured = true, channel = current.NotificationChannel, hasGmailScope = hasScope, needsReauth });
+                    // Also publish gemini status (always required regardless of channel)
+                    bool hasGemini = false;
+                    if (!string.IsNullOrWhiteSpace(current.SenderEmail))
+                    {
+                        try { hasGemini = await credentialProvider.HasGeminiScopeAsync(current.SenderEmail); } catch { hasGemini = false; }
+                    }
+                    bool geminiNeedsReauth = !hasGemini;
+                    sse.Publish("geminiStatus", new { configured = true, hasGeminiScope = hasGemini, needsReauth = geminiNeedsReauth });
+                }
+                else
+                {
+                    sse.Publish("gmailStatus", new { configured = false, channel = (NotificationChannel?)null, hasGmailScope = false, needsReauth = false });
+                    sse.Publish("geminiStatus", new { configured = false, hasGeminiScope = false, needsReauth = false });
+                }
                 return Results.Ok();
             })
             .WithName("UpdateSettings")
@@ -229,6 +271,7 @@ namespace AiWebSiteWatchDog.API
                                                     [FromServices] IWatcherService watcherService,
                                                     [FromServices] INotificationRepository notifications,
                                                     [FromServices] INotificationService notificationService,
+                                                    [FromServices] AiWebSiteWatchDog.Infrastructure.Events.SseEventPublisher sse,
                                                     int id,
                                                     [FromQuery] bool sendEmail = false) =>
             {
@@ -246,12 +289,14 @@ namespace AiWebSiteWatchDog.API
                     var message = GeminiResponseParser.ExtractText(updated.LastResult) ?? "(no content)";
                     if (sendEmail)
                     {
-                        await notificationService.SendNotificationAsync(new CreateNotificationRequest(subject, message));
+                        var dtoEmail = await notificationService.SendNotificationAsync(new CreateNotificationRequest(subject, message));
+                        sse.Publish("notification", dtoEmail);
                     }
                     else
                     {
                         var notification = new Notification(0, subject, message, DateTime.UtcNow);
                         await notifications.AddAsync(notification);
+                        sse.Publish("notification", notification.ToDto());
                     }
 
                     return Results.Ok(updated.ToDto());
@@ -354,9 +399,12 @@ namespace AiWebSiteWatchDog.API
             .WithDescription("Delete all notifications in the system.");
 
             // Send notification (trigger email)
-            app.MapPost("/notifications", async ([FromServices] INotificationService notificationService, CreateNotificationRequest request) =>
+            app.MapPost("/notifications", async ([FromServices] INotificationService notificationService,
+                                                  [FromServices] AiWebSiteWatchDog.Infrastructure.Events.SseEventPublisher sse,
+                                                  CreateNotificationRequest request) =>
             {
                 var dto = await notificationService.SendNotificationAsync(request);
+                sse.Publish("notification", dto);
                 return Results.Created($"/notifications/{dto.Id}", dto);
             })
             .WithName("SendNotification")
@@ -402,6 +450,9 @@ namespace AiWebSiteWatchDog.API
                         return Results.BadRequest("Sender email not configured and no senderEmail query parameter provided.");
                     senderEmail = settings.SenderEmail;
                 }
+                // Determine whether Gmail send scope should be requested based on current channel
+                var settingsForScope = await settingsService.GetSettingsAsync();
+                bool includeGmail = settingsForScope?.NotificationChannel == NotificationChannel.Email;
 
                 // Build external redirect URI using request info (respects forwarded headers)
                 var host = request.Scheme + "://" + request.Host.ToUriComponent();
@@ -411,17 +462,64 @@ namespace AiWebSiteWatchDog.API
                 var state = Guid.NewGuid().ToString("n");
                 cache.Set($"oauth:state:{state}", senderEmail!, TimeSpan.FromMinutes(10));
 
-                var url = credentialProvider.CreateAuthorizationUrl(senderEmail!, callback, state);
+                var url = credentialProvider.CreateAuthorizationUrl(senderEmail!, callback, includeGmail, state);
                 return Results.Redirect(url);
             })
             .WithTags("auth")
             .WithDescription("Starts Google OAuth consent and redirects the client to Google. Optional query ?senderEmail=")
             .RequireRateLimiting("StrictPerIp");
 
+            // Gmail auth status endpoint (scope presence & reauth advice)
+            app.MapGet("/auth/gmail-status", async (
+                [FromServices] Infrastructure.Auth.IGoogleCredentialProvider credentialProvider,
+                [FromServices] ISettingsService settingsService) =>
+            {
+                var settings = await settingsService.GetSettingsAsync();
+                if (settings is null)
+                {
+                    return Results.Ok(new { configured = false, channel = (NotificationChannel?)null, hasGmailScope = false, needsReauth = false });
+                }
+                bool hasScope = false;
+                if (!string.IsNullOrWhiteSpace(settings.SenderEmail))
+                {
+                    try { hasScope = await credentialProvider.HasGmailSendScopeAsync(settings.SenderEmail); }
+                    catch { hasScope = false; }
+                }
+                bool needsReauth = settings.NotificationChannel == NotificationChannel.Email && !hasScope;
+                return Results.Ok(new { configured = true, channel = settings.NotificationChannel, hasGmailScope = hasScope, needsReauth });
+            })
+            .WithTags("auth")
+            .WithDescription("Returns Gmail scope status and whether re-authorization is required for current channel.");
+
+            // Gemini auth status endpoint (Gemini scope presence & reauth advice)
+            app.MapGet("/auth/gemini-status", async (
+                [FromServices] Infrastructure.Auth.IGoogleCredentialProvider credentialProvider,
+                [FromServices] ISettingsService settingsService) =>
+            {
+                var settings = await settingsService.GetSettingsAsync();
+                if (settings is null)
+                {
+                    return Results.Ok(new { configured = false, hasGeminiScope = false, needsReauth = false });
+                }
+                bool hasGemini = false;
+                if (!string.IsNullOrWhiteSpace(settings.SenderEmail))
+                {
+                    try { hasGemini = await credentialProvider.HasGeminiScopeAsync(settings.SenderEmail); }
+                    catch { hasGemini = false; }
+                }
+                // Always required for app functionality
+                bool needsReauth = !hasGemini;
+                return Results.Ok(new { configured = true, hasGeminiScope = hasGemini, needsReauth });
+            })
+            .WithTags("auth")
+            .WithDescription("Returns Gemini scope status and whether re-authorization is required to use Gemini API.");
+
             // OAuth callback endpoint: Google redirects here with ?code= and ?state=
             app.MapGet("/auth/callback", async (
                 [FromServices] Infrastructure.Auth.IGoogleCredentialProvider credentialProvider,
                 [FromServices] IMemoryCache cache,
+                [FromServices] ISettingsService settingsService,
+                [FromServices] AiWebSiteWatchDog.Infrastructure.Events.SseEventPublisher sse,
                 HttpRequest request,
                 CancellationToken ct) =>
             {
@@ -441,8 +539,24 @@ namespace AiWebSiteWatchDog.API
                 try
                 {
                     await credentialProvider.ExchangeCodeForTokenAsync(senderEmail!, code!, callback, ct);
-                    // Clear state once used
                     cache.Remove($"oauth:state:{state}");
+                    // Publish updated gmail status
+                    var current = await settingsService.GetSettingsAsync();
+                    bool hasScope = false;
+                    if (current is not null && !string.IsNullOrWhiteSpace(current.SenderEmail))
+                    {
+                        try { hasScope = await credentialProvider.HasGmailSendScopeAsync(current.SenderEmail); } catch { hasScope = false; }
+                    }
+                    bool needsReauth = current != null && current.NotificationChannel == NotificationChannel.Email && !hasScope;
+                    sse.Publish("gmailStatus", new { configured = current != null, channel = current?.NotificationChannel, hasGmailScope = hasScope, needsReauth });
+                    // Publish updated gemini status
+                    bool hasGemini = false;
+                    if (current is not null && !string.IsNullOrWhiteSpace(current.SenderEmail))
+                    {
+                        try { hasGemini = await credentialProvider.HasGeminiScopeAsync(current.SenderEmail); } catch { hasGemini = false; }
+                    }
+                    bool geminiNeedsReauth = !hasGemini;
+                    sse.Publish("geminiStatus", new { configured = current != null, hasGeminiScope = hasGemini, needsReauth = geminiNeedsReauth });
                     return Results.Content("Google authorization completed. You may close this window.", "text/plain");
                 }
                 catch (Exception ex)
@@ -453,45 +567,39 @@ namespace AiWebSiteWatchDog.API
             .WithTags("auth")
             .WithDescription("OAuth2 callback endpoint to complete Google consent and persist tokens.")
             .DisableRateLimiting();
-
-            // Simple UI page to initiate consent via a clickable button (opens new tab)
-            app.MapGet("/auth", async ([FromServices] ISettingsService settingsService) =>
+            
+            // SSE events endpoint (notifications + gmailStatus + geminiStatus). One stream per client.
+            app.MapGet("/events", async (HttpContext ctx,
+                                          [FromServices] AiWebSiteWatchDog.Infrastructure.Events.SseEventPublisher sse,
+                                          CancellationToken ct) =>
             {
-                var settings = await settingsService.GetSettingsAsync();
-                var prefill = WebUtility.HtmlEncode(settings?.SenderEmail ?? string.Empty);
-                                var html = $@"<html>
-                                                <head>
-                                                    <title>Authorize Gmail/Gemini</title>
-                                                    <style>
-                                                        body {{ font-family: sans-serif; margin: 2rem }}
-                                                        input, button {{ font-size: 1rem; padding: .5rem; margin: .25rem 0 }}
-                                                    </style>
-                                                </head>
-                                                <body>
-                                                    <h2>Authorize AiWebSiteWatchDog with Google</h2>
-
-                                                    <p>
-                                                        Click the button to open Google consent in a new tab. After you approve, you can close that tab.
-                                                    </p>
-
-                                                    <form method=""get"" action=""/auth/start"" target=""_blank"">
-                                                        <label>
-                                                            Sender email<br />
-                                                            <input type=""email"" name=""senderEmail"" value=""{prefill}"" required />
-                                                        </label>
-                                                        <br />
-                                                        <button type=""submit"">Open Google consent</button>
-                                                        <p>
-                                                            <small>If your email is saved in settings, you can leave it as-is.</small>
-                                                        </p>
-                                                    </form>
-                                                </body>
-                                            </html>";
-                return Results.Content(html, "text/html");
+                // Use Append/indexer to avoid ASP0019 analyzer warnings and duplicate header issues
+                ctx.Response.Headers.Append("Content-Type", "text/event-stream");
+                ctx.Response.Headers.Append("Cache-Control", "no-cache");
+                var (subId, reader) = sse.Subscribe();
+                while (!ct.IsCancellationRequested)
+                {
+                    try
+                    {
+                        var evt = await reader.ReadAsync(ct);
+                        var json = System.Text.Json.JsonSerializer.Serialize(evt.Data, new System.Text.Json.JsonSerializerOptions
+                        {
+                            PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+                        });
+                        await ctx.Response.WriteAsync($"event: {evt.Name}\n", ct);
+                        await ctx.Response.WriteAsync($"data: {json}\n\n", ct);
+                        await ctx.Response.Body.FlushAsync(ct);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        break;
+                    }
+                }
+                sse.Unsubscribe(subId);
             })
-            .WithTags("auth")
-            .WithDescription("Minimal HTML page with a button that opens the Google consent in a new tab.");
-        
+            .WithTags("Events")
+            .WithDescription("Server-Sent Events stream for notifications and Gmail/Gemini auth status.")
+            .DisableRateLimiting();
         } 
     }
 }

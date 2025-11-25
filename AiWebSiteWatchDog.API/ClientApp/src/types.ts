@@ -24,15 +24,21 @@ export type NotificationItem = {
   sentAt: string
 }
 
+export type NotificationChannel = 'Email' | 'Telegram'
+
 export type Settings = {
   userEmail: string
   senderEmail: string
   senderName: string
   geminiApiUrl: string
+  notificationChannel: NotificationChannel
+  maskedTelegramBotToken?: string | null
+  telegramChatId?: string | null
   watchTasks: WatchTask[]
 }
 
-export type SettingsForm = Pick<Settings, 'userEmail' | 'senderEmail' | 'senderName' | 'geminiApiUrl'>
+// Form retains editable raw token field locally although API does not return it
+export type SettingsForm = Pick<Settings, 'userEmail' | 'senderEmail' | 'senderName' | 'geminiApiUrl' | 'notificationChannel' | 'telegramChatId'> & { telegramBotToken?: string | null }
 
 export type NewTaskForm = {
   title: string
@@ -43,3 +49,16 @@ export type NewTaskForm = {
 }
 
 export type EditTaskForm = Partial<Pick<WatchTaskFull, 'title' | 'url' | 'taskPrompt' | 'schedule' | 'enabled'>>
+
+export type GmailStatus = {
+  configured: boolean
+  channel: NotificationChannel | null
+  hasGmailScope: boolean
+  needsReauth: boolean
+}
+
+export type GeminiStatus = {
+  configured: boolean
+  hasGeminiScope: boolean
+  needsReauth: boolean
+}

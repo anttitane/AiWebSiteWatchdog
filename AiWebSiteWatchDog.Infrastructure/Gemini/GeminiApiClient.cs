@@ -53,7 +53,7 @@ namespace AiWebSiteWatchDog.Infrastructure.Gemini
             // 4. Call Gemini API
             try
             {
-                var credential = await _credentialProvider.GetGmailAndGeminiCredentialAsync(senderEmail);
+                var credential = await _credentialProvider.GetCredentialAsync(senderEmail, includeGmailSend: false);
                 var accessToken = await credential.GetAccessTokenForRequestAsync();
 
                 var request = new HttpRequestMessage(HttpMethod.Post, geminiUrl)
