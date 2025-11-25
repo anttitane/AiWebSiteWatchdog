@@ -91,9 +91,10 @@ namespace AiWebSiteWatchDog.Infrastructure.Telegram
             var lines = raw.Split('\n');
             var escapedBuilder = new System.Text.StringBuilder();
             var rawBuilder = new System.Text.StringBuilder();
-            foreach (var lineRaw in lines)
+            foreach (var tuple in System.Linq.Enumerable.Select(lines, l => (Raw: l, Escaped: EscapeMarkdownV2(l))))
             {
-                var lineEscaped = EscapeMarkdownV2(lineRaw);
+                var lineRaw = tuple.Raw;
+                var lineEscaped = tuple.Escaped;
                 // +1 for newline we will append (except maybe last)
                 if (escapedBuilder.Length + lineEscaped.Length + 1 > ChunkSoftLimit)
                 {
