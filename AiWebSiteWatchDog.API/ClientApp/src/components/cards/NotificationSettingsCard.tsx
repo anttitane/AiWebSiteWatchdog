@@ -160,14 +160,13 @@ export default function NotificationSettingsCard({ settings, loaded, form, setFo
               <input
                 className={
                   "modal-input transition-colors " +
-                  (editing ? '' : 'bg-gray-50 text-gray-600 border border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-500') +
                   (changed.senderName ? ' ring-2 ring-amber-300 dark:ring-amber-500' : '')
                 }
                 type="text"
                 value={form.senderName}
                 onChange={e => setForm(f => ({ ...f, senderName: e.target.value }))}
                 placeholder="Ai Watchdog"
-                disabled={saving || !editing}
+                disabled={saving}
               />
               <span className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">Sender name in the notification email.</span>
             </label>
@@ -178,14 +177,13 @@ export default function NotificationSettingsCard({ settings, loaded, form, setFo
               <input
                 className={
                   "modal-input transition-colors " +
-                  (editing ? '' : 'bg-gray-50 text-gray-600 border border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-500') +
                   (changed.userEmail ? ' ring-2 ring-amber-300 dark:ring-amber-500' : '')
                 }
                 type="email"
                 value={form.userEmail}
                 onChange={e => setForm(f => ({ ...f, userEmail: e.target.value }))}
                 placeholder="recipient@example.com"
-                disabled={saving || !editing}
+                disabled={saving}
               />
               <span className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">Used only when sending Email notifications.</span>
             </label>
@@ -217,14 +215,13 @@ export default function NotificationSettingsCard({ settings, loaded, form, setFo
                 <input
                   className={
                     "modal-input font-mono text-xs transition-colors " +
-                    (editing ? '' : 'bg-gray-50 text-gray-600 border border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-500') +
                     (changed.telegramBotToken ? ' ring-2 ring-amber-300 dark:ring-amber-500' : '')
                   }
                   type="text"
                   value={form.telegramBotToken || ''}
                   onChange={e => setForm(f => ({ ...f, telegramBotToken: e.target.value }))}
                   placeholder="Enter new bot token to replace stored one"
-                  disabled={saving || !editing}
+                  disabled={saving}
                 />
                 <span className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">Bot token is stored securely; you must re-enter a new one to change it.</span>
               </label>
@@ -244,14 +241,13 @@ export default function NotificationSettingsCard({ settings, loaded, form, setFo
                 <input
                   className={
                     "modal-input font-mono text-xs transition-colors " +
-                    (editing ? '' : 'bg-gray-50 text-gray-600 border border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-500') +
                     (changed.telegramChatId ? ' ring-2 ring-amber-300 dark:ring-amber-500' : '')
                   }
                   type="text"
                   value={form.telegramChatId || ''}
                   onChange={e => setForm(f => ({ ...f, telegramChatId: e.target.value }))}
                   placeholder="123456789"
-                  disabled={saving || !editing}
+                  disabled={saving}
                 />
               </label>
             ) : (
