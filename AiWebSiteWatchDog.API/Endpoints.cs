@@ -573,8 +573,9 @@ namespace AiWebSiteWatchDog.API
                                           [FromServices] AiWebSiteWatchDog.Infrastructure.Events.SseEventPublisher sse,
                                           CancellationToken ct) =>
             {
-                ctx.Response.Headers.Add("Content-Type", "text/event-stream");
-                ctx.Response.Headers.Add("Cache-Control", "no-cache");
+                // Use Append/indexer to avoid ASP0019 analyzer warnings and duplicate header issues
+                ctx.Response.Headers.Append("Content-Type", "text/event-stream");
+                ctx.Response.Headers.Append("Cache-Control", "no-cache");
                 var (subId, reader) = sse.Subscribe();
                 while (!ct.IsCancellationRequested)
                 {
