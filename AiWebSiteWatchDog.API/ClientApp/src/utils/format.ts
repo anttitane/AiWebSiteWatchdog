@@ -1,5 +1,15 @@
+function parseDate(value: string | number | Date): Date {
+  if (typeof value === 'string') {
+    const hasTz = /[zZ]|[+-]\d{2}:?\d{2}$/.test(value)
+    if (!hasTz && /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(value)) {
+      return new Date(value + 'Z')
+    }
+  }
+  return new Date(value)
+}
+
 export function formatDateTime(value: string | number | Date): string {
-  const d = new Date(value)
+  const d = parseDate(value)
   const pad = (n: number) => String(n).padStart(2, '0')
   const day = pad(d.getDate())
   const month = pad(d.getMonth() + 1)
@@ -13,7 +23,7 @@ export function formatDateTime(value: string | number | Date): string {
 
 export function formatRelative(value: string | number | Date): string {
   const now = Date.now()
-  const t = new Date(value).getTime()
+  const t = parseDate(value).getTime()
   if (isNaN(t)) return ''
   const deltaMs = t - now
   const future = deltaMs > 0
