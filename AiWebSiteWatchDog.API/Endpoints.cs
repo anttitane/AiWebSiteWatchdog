@@ -37,6 +37,14 @@ namespace AiWebSiteWatchDog.API
                                               [FromServices] AiWebSiteWatchDog.Infrastructure.Events.SseEventPublisher sse,
                                               UserSettings settings) =>
             {
+                var existingSettings = await settingsService.GetSettingsAsync();
+                if (settings.NotificationChannel == NotificationChannel.Telegram)
+                {
+                    if (string.IsNullOrWhiteSpace(settings.TelegramBotToken) && !string.IsNullOrWhiteSpace(existingSettings?.TelegramBotToken))
+                        settings.TelegramBotToken = existingSettings!.TelegramBotToken;
+                    if (string.IsNullOrWhiteSpace(settings.TelegramChatId) && !string.IsNullOrWhiteSpace(existingSettings?.TelegramChatId))
+                        settings.TelegramChatId = existingSettings!.TelegramChatId;
+                }
                 // Basic validation depending on notification channel
                 var errors = new Dictionary<string, string[]>();
                 if (settings.NotificationChannel == NotificationChannel.Email)
