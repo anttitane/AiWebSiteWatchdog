@@ -17,7 +17,7 @@ export default function GeminiApiUrlCard({ settings, onSaveGeminiUrl, savingGemi
 			setLocalUrl(settings?.geminiApiUrl || '')
 			setOriginal(settings?.geminiApiUrl || '')
 		}
-	}, [settings])
+	}, [settings, editing])
 
 	function startEdit() {
 		setOriginal(localUrl)
