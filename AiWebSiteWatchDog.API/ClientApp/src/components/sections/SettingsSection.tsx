@@ -41,7 +41,7 @@ export default function SettingsSection({
         senderName: base?.senderName || '',
         geminiApiUrl: base?.geminiApiUrl || '',
         notificationChannel: base?.notificationChannel || 'Email',
-        telegramBotToken: base?.maskedTelegramBotToken || null,
+        telegramBotToken: form.telegramBotToken || null,
         telegramChatId: base?.telegramChatId || null
       }
       await svcUpdateSettings(payload)
@@ -52,7 +52,7 @@ export default function SettingsSection({
         senderName: latest.senderName || '',
         geminiApiUrl: latest.geminiApiUrl || '',
         notificationChannel: latest.notificationChannel || 'Email',
-        telegramBotToken: latest.maskedTelegramBotToken || '',
+        telegramBotToken: '',
         telegramChatId: latest.telegramChatId || ''
       })
       await refreshAuthStatuses()
@@ -62,7 +62,7 @@ export default function SettingsSection({
       toast.error(String(e))
       return false
     }
-  }, [settings, setForm, refreshAuthStatuses])
+  }, [settings, form.telegramBotToken, setForm, refreshAuthStatuses])
 
   // Partial save for Gemini API URL
   const saveGeminiUrl = useCallback(async (url: string): Promise<boolean> => {
@@ -74,7 +74,7 @@ export default function SettingsSection({
         senderName: base?.senderName || '',
         geminiApiUrl: url,
         notificationChannel: base?.notificationChannel || 'Email',
-        telegramBotToken: base?.maskedTelegramBotToken || null,
+        telegramBotToken: form.telegramBotToken || null,
         telegramChatId: base?.telegramChatId || null
       }
       await svcUpdateSettings(payload)
@@ -85,7 +85,7 @@ export default function SettingsSection({
         senderName: latest.senderName || '',
         geminiApiUrl: latest.geminiApiUrl || '',
         notificationChannel: latest.notificationChannel || 'Email',
-        telegramBotToken: latest.maskedTelegramBotToken || '',
+        telegramBotToken: '',
         telegramChatId: latest.telegramChatId || ''
       })
       if (onPartialSaved) await onPartialSaved()
@@ -94,7 +94,7 @@ export default function SettingsSection({
       toast.error(String(e))
       return false
     }
-  }, [settings, setForm])
+  }, [settings, form.telegramBotToken, setForm])
 
   return (
     <div className="space-y-6">

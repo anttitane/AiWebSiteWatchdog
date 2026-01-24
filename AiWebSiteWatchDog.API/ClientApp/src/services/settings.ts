@@ -7,7 +7,20 @@ export async function getSettings(): Promise<Settings> {
 }
 
 export async function updateSettings(payload: SettingsForm): Promise<void> {
-  await api.put('/settings', payload)
+  const body: Partial<SettingsForm> = {
+    userEmail: payload.userEmail ?? '',
+    senderEmail: payload.senderEmail ?? '',
+    senderName: payload.senderName ?? '',
+    geminiApiUrl: payload.geminiApiUrl ?? '',
+    notificationChannel: payload.notificationChannel ?? 'Email',
+    telegramBotToken: payload.telegramBotToken ? payload.telegramBotToken : undefined,
+    telegramChatId: payload.telegramChatId ?? null
+  }
+  Object.keys(body).forEach(key => {
+    const k = key as keyof SettingsForm
+    if (body[k] === undefined) delete body[k]
+  })
+  await api.put('/settings', body)
 }
 
 export async function getGmailStatus(): Promise<GmailStatus> {
