@@ -1,6 +1,6 @@
 function parseDate(value: string | number | Date): Date {
   if (typeof value === 'string') {
-    const hasTz = /[zZ]|[+-]\d{2}:?\d{2}$/.test(value)
+    const hasTz = /[zZ]$|[+-]\d{2}:?\d{2}$/.test(value)
     if (!hasTz && /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(value)) {
       return new Date(value + 'Z')
     }
