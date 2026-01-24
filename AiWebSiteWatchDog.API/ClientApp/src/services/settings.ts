@@ -14,7 +14,7 @@ export async function updateSettings(payload: SettingsForm): Promise<void> {
     geminiApiUrl: payload.geminiApiUrl ?? '',
     notificationChannel: payload.notificationChannel ?? 'Email',
     telegramBotToken: payload.telegramBotToken ? payload.telegramBotToken : undefined,
-    telegramChatId: payload.telegramChatId ?? null
+    telegramChatId: payload.telegramChatId ? payload.telegramChatId : undefined
   }
   Object.keys(body).forEach(key => {
     const k = key as keyof SettingsForm
