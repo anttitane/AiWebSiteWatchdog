@@ -38,12 +38,12 @@ namespace AiWebSiteWatchDog.API
                                               UserSettings settings) =>
             {
                 var existingSettings = await settingsService.GetSettingsAsync();
-                if (settings.NotificationChannel == NotificationChannel.Telegram)
+                if (settings.NotificationChannel == NotificationChannel.Telegram && existingSettings != null)
                 {
-                    if (string.IsNullOrWhiteSpace(settings.TelegramBotToken) && !string.IsNullOrWhiteSpace(existingSettings?.TelegramBotToken))
-                        settings.TelegramBotToken = existingSettings!.TelegramBotToken;
-                    if (string.IsNullOrWhiteSpace(settings.TelegramChatId) && !string.IsNullOrWhiteSpace(existingSettings?.TelegramChatId))
-                        settings.TelegramChatId = existingSettings!.TelegramChatId;
+                    if (string.IsNullOrWhiteSpace(settings.TelegramBotToken) && !string.IsNullOrWhiteSpace(existingSettings.TelegramBotToken))
+                        settings.TelegramBotToken = existingSettings.TelegramBotToken;
+                    if (string.IsNullOrWhiteSpace(settings.TelegramChatId) && !string.IsNullOrWhiteSpace(existingSettings.TelegramChatId))
+                        settings.TelegramChatId = existingSettings.TelegramChatId;
                 }
                 // Basic validation depending on notification channel
                 var errors = new Dictionary<string, string[]>();
