@@ -16,11 +16,13 @@ export async function updateSettings(payload: SettingsForm): Promise<void> {
     telegramBotToken: payload.telegramBotToken ? payload.telegramBotToken : undefined,
     telegramChatId: payload.telegramChatId ? payload.telegramChatId : undefined
   }
-  Object.keys(body).forEach(key => {
-    const k = key as keyof SettingsForm
-    if (body[k] === undefined) delete body[k]
-  })
-  await api.put('/settings', body)
+  const cleanBody = Object.entries(body).reduce<Partial<SettingsForm>>((acc, [key, value]) => {
+    if (value !== undefined) {
+      acc[key as keyof SettingsForm] = value
+    }
+    return acc
+  }, {})
+  await api.put('/settings', cleanBody)
 }
 
 export async function getGmailStatus(): Promise<GmailStatus> {
