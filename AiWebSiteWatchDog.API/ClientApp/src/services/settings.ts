@@ -16,12 +16,9 @@ export async function updateSettings(payload: SettingsForm): Promise<void> {
     telegramBotToken: payload.telegramBotToken ? payload.telegramBotToken : undefined,
     telegramChatId: payload.telegramChatId ? payload.telegramChatId : undefined
   }
-  const cleanBody = Object.entries(body).reduce<Partial<SettingsForm>>((acc, [key, value]) => {
-    if (value !== undefined) {
-      acc[key as keyof SettingsForm] = value
-    }
-    return acc
-  }, {})
+  const cleanBody = Object.fromEntries(
+    Object.entries(body).filter(([, value]) => value !== undefined)
+  ) as Partial<SettingsForm>
   await api.put('/settings', cleanBody)
 }
 
