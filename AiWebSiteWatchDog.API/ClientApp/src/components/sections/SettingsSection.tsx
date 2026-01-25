@@ -41,7 +41,6 @@ export default function SettingsSection({
         senderName: base?.senderName || '',
         geminiApiUrl: base?.geminiApiUrl || '',
         notificationChannel: base?.notificationChannel || 'Email',
-        telegramBotToken: form.telegramBotToken || null,
         telegramChatId: base?.telegramChatId || null
       }
       await svcUpdateSettings(payload)
@@ -62,7 +61,7 @@ export default function SettingsSection({
       toast.error(String(e))
       return false
     }
-  }, [settings, form.telegramBotToken, setForm, refreshAuthStatuses])
+  }, [settings, setForm, refreshAuthStatuses])
 
   // Partial save for Gemini API URL
   const saveGeminiUrl = useCallback(async (url: string): Promise<boolean> => {
@@ -74,7 +73,6 @@ export default function SettingsSection({
         senderName: base?.senderName || '',
         geminiApiUrl: url,
         notificationChannel: base?.notificationChannel || 'Email',
-        telegramBotToken: form.telegramBotToken || null,
         telegramChatId: base?.telegramChatId || null
       }
       await svcUpdateSettings(payload)
@@ -94,7 +92,7 @@ export default function SettingsSection({
       toast.error(String(e))
       return false
     }
-  }, [settings, form.telegramBotToken, setForm])
+  }, [settings, setForm])
 
   return (
     <div className="space-y-6">

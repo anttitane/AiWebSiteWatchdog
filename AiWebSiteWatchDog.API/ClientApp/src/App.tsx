@@ -374,6 +374,15 @@ export default function App() {
     }
   }
 
+  async function refreshSettings() {
+    try {
+      const latest = await svcGetSettings()
+      setSettings(latest)
+    } catch {
+      // ignore refresh errors for partial saves
+    }
+  }
+
   async function saveSettings(): Promise<boolean> {
     setSaving(true)
     setSaveMsg(null)
@@ -771,6 +780,7 @@ export default function App() {
             saving={saving}
             refreshAuthStatuses={loadAuthStatuses}
             onSaveAll={saveSettings}
+            onPartialSaved={refreshSettings}
           />
         )}
 
