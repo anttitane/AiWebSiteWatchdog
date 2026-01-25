@@ -80,7 +80,9 @@ export default function NotificationSettingsCard({ settings, loaded, form, setFo
   const channelIsTelegram = form.notificationChannel === 'Telegram'
   const channelIsEmail = form.notificationChannel === 'Email'
   const emailValid = channelIsEmail ? !!form.userEmail && !!form.senderEmail : true
-  const telegramValid = channelIsTelegram ? !!form.telegramBotToken && !!form.telegramChatId : true
+    const telegramValid = channelIsTelegram
+      ? !!form.telegramChatId && (!changed.telegramBotToken || !!form.telegramBotToken || !!settings?.maskedTelegramBotToken)
+      : true
   const canSave = emailValid && telegramValid
 
   const [testSending, setTestSending] = useState(false)
