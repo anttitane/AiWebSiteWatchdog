@@ -10,6 +10,7 @@ namespace AiWebSiteWatchDog.Domain.DTOs
         string NotificationChannel,
         string? MaskedTelegramBotToken,
         string? TelegramChatId,
+        int NotificationRetentionDays,
         IReadOnlyCollection<WatchTaskSummaryDto> WatchTasks);
 
     public record WatchTaskSummaryDto(

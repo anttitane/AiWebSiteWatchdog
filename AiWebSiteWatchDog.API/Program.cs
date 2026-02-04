@@ -110,8 +110,9 @@ builder.Services.AddSingleton<AiWebSiteWatchDog.Infrastructure.Events.SseEventPu
 builder.Services.AddScoped<ISettingsService, AiWebSiteWatchDog.Application.Services.SettingsService>();
 builder.Services.AddScoped<INotificationService, AiWebSiteWatchDog.Application.Services.NotificationService>();
 builder.Services.AddScoped<IWatcherService, AiWebSiteWatchDog.Application.Services.WatcherService>();
-// Register Hangfire job runner
+// Register Hangfire job runners
 builder.Services.AddScoped<WatchTaskJobRunner>();
+builder.Services.AddScoped<NotificationCleanupJob>();
 
 var app = builder.Build();
 
@@ -139,6 +140,10 @@ using (var scope = app.Services.CreateScope())
 {
     var taskRepo = scope.ServiceProvider.GetRequiredService<AiWebSiteWatchDog.Infrastructure.Persistence.WatchTaskRepository>();
     var jobs = scope.ServiceProvider.GetRequiredService<IRecurringJobManager>();
+
+    // Schedule notification cleanup job (Daily at 04:00)
+    jobs.AddOrUpdate<NotificationCleanupJob>("NotificationCleanup", job => job.ExecuteAsync(), "0 4 * * *", new RecurringJobOptions { TimeZone = TimeZoneInfo.Local });
+
     var tasks = taskRepo.GetAllAsync().GetAwaiter().GetResult();
     foreach (var t in tasks)
     {
