@@ -34,7 +34,7 @@ export type Settings = {
   notificationChannel: NotificationChannel
   maskedTelegramBotToken?: string | null
   telegramChatId?: string | null
-  notificationRetentionDays?: number
+  notificationRetentionDays: number
   watchTasks: WatchTask[]
 }
 
