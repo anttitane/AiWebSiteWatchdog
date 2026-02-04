@@ -58,5 +58,13 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
             _dbContext.Notifications.RemoveRange(items);
             return await _dbContext.SaveChangesAsync();
         }
+
+        public async Task<int> DeleteOlderThanAsync(System.DateTime cutoffDate)
+        {
+            var items = await _dbContext.Notifications.Where(n => n.SentAt < cutoffDate).ToListAsync();
+            if (items.Count == 0) return 0;
+            _dbContext.Notifications.RemoveRange(items);
+            return await _dbContext.SaveChangesAsync();
+        }
     }
 }

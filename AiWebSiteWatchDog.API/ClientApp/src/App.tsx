@@ -43,7 +43,8 @@ export default function App() {
     geminiApiUrl: '',
     notificationChannel: 'Email',
     telegramBotToken: '',
-    telegramChatId: ''
+    telegramChatId: '',
+    notificationRetentionDays: 30
   })
   const [saving, setSaving] = useState(false)
   const [saveMsg, setSaveMsg] = useState<string | null>(null)
@@ -194,6 +195,7 @@ export default function App() {
             geminiApiUrl: data.geminiApiUrl || '',
             notificationChannel: data.notificationChannel || 'Email',
             telegramChatId: data.telegramChatId || '',
+            notificationRetentionDays: data.notificationRetentionDays || 30,
             telegramBotToken: '' // raw token never returned; user must re-enter to replace
           })
         }
@@ -396,6 +398,7 @@ export default function App() {
         geminiApiUrl: form.geminiApiUrl,
         notificationChannel: form.notificationChannel,
         telegramBotToken: form.telegramBotToken || null,
+        notificationRetentionDays: form.notificationRetentionDays || 30,
         telegramChatId: form.telegramChatId || null
       }
       await svcUpdateSettings(payload)
@@ -407,6 +410,7 @@ export default function App() {
         senderEmail: latest.senderEmail || '',
         senderName: latest.senderName || '',
         geminiApiUrl: latest.geminiApiUrl || '',
+        notificationRetentionDays: latest.notificationRetentionDays || 30,
         notificationChannel: latest.notificationChannel || 'Email',
         telegramChatId: latest.telegramChatId || '',
         telegramBotToken: ''

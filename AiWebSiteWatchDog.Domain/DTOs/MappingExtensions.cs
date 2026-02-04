@@ -27,6 +27,7 @@ namespace AiWebSiteWatchDog.Domain.DTOs
                 settings.NotificationChannel.ToString(),
                 MaskToken(settings.TelegramBotToken),
                 settings.TelegramChatId,
+                settings.NotificationRetentionDays,
                 settings.WatchTasks.Select(t => t.ToSummaryDto()).ToList());
 
         public static NotificationDto ToDto(this Notification notification) =>

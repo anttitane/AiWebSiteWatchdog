@@ -25,6 +25,7 @@ export default function NotificationSettingsCard({ settings, loaded, form, setFo
         geminiApiUrl: settings.geminiApiUrl || '',
         notificationChannel: settings.notificationChannel || 'Email',
         telegramChatId: settings.telegramChatId || '',
+        notificationRetentionDays: settings.notificationRetentionDays || 30,
         // token not returned; leave empty
         telegramBotToken: ''
       })
@@ -46,6 +47,7 @@ export default function NotificationSettingsCard({ settings, loaded, form, setFo
         geminiApiUrl: settings.geminiApiUrl || '',
         notificationChannel: settings.notificationChannel || 'Email',
         telegramChatId: settings.telegramChatId || '',
+        notificationRetentionDays: settings.notificationRetentionDays || 30,
         telegramBotToken: ''
       })
     }
@@ -66,14 +68,16 @@ export default function NotificationSettingsCard({ settings, loaded, form, setFo
       senderName: false,
       notificationChannel: false,
       telegramBotToken: false,
-      telegramChatId: false
+      telegramChatId: false,
+      notificationRetentionDays: false
     }
     return {
       userEmail: form.userEmail !== original.userEmail,
       senderName: form.senderName !== original.senderName,
       notificationChannel: form.notificationChannel !== original.notificationChannel,
       telegramBotToken: (form.telegramBotToken || '') !== (original.telegramBotToken || ''),
-      telegramChatId: (form.telegramChatId || '') !== (original.telegramChatId || '')
+      telegramChatId: (form.telegramChatId || '') !== (original.telegramChatId || ''),
+      notificationRetentionDays: form.notificationRetentionDays !== original.notificationRetentionDays
     }
   }, [editing, original, form])
 
@@ -269,6 +273,36 @@ export default function NotificationSettingsCard({ settings, loaded, form, setFo
           </p>
         )}
         {editing && (
+          <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
+            <label className={"text-sm flex flex-col relative " + (changed.notificationRetentionDays ? 'after:absolute after:-right-2 after:top-2 after:w-2 after:h-2 after:rounded-full after:bg-amber-400' : '')}>
+              <span className="text-gray-700 dark:text-gray-200 flex items-center gap-1">
+                Notification Retention (Days) {changed.notificationRetentionDays && <span className="text-amber-600 dark:text-amber-400 text-[10px] font-medium">Changed</span>}
+              </span>
+              <input
+                className={
+                  "modal-input transition-colors w-24 " +
+                  (changed.notificationRetentionDays ? ' ring-2 ring-amber-300 dark:ring-amber-500' : '')
+                }
+                type="number"
+                min="1"
+                max="365"
+                value={form.notificationRetentionDays || 30}
+                onChange={e => {
+                  const val = parseInt(e.target.value, 10);
+                  setForm(f => ({
+                    ...f,
+                    notificationRetentionDays: Number.isNaN(val)
+                      ? 30
+                      : Math.min(365, Math.max(1, val)),
+                  }));
+                }}
+                disabled={saving}
+              />
+              <span className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">Notifications older than this will be automatically deleted.</span>
+            </label>
+          </div>
+        )}
+        {editing && (
           <div className="flex justify-end gap-3 pt-2">
             <button className="btn-secondary px-3 py-2" onClick={cancelEdit} disabled={saving}>Cancel</button>
             <button className="btn-primary px-3 py-2" onClick={saveEdit} disabled={saving || !canSave}>Save</button>
@@ -298,6 +332,12 @@ export default function NotificationSettingsCard({ settings, loaded, form, setFo
               <span className="text-[10px] text-amber-600 dark:text-amber-400">Gmail authorization required.</span>
             )}
             {testMsg && <span className="text-xs font-medium text-gray-700 dark:text-gray-200">{testMsg}</span>}
+          </div>
+          <div className="mt-4 flex flex-col">
+            <span className="text-xs font-medium text-gray-600 dark:text-gray-300">Notification Retention</span>
+            <div className="mt-1 px-3 py-2 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm text-gray-700 dark:text-gray-200">
+              Keep notifications for <strong>{settings?.notificationRetentionDays || 30}</strong> days.
+            </div>
           </div>
         </div>
       )}

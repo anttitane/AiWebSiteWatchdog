@@ -150,6 +150,7 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
                         NotificationChannel = settings.NotificationChannel,
                         TelegramBotToken = Encrypt(settings.TelegramBotToken),
                         TelegramChatId = settings.TelegramChatId,
+                        NotificationRetentionDays = settings.NotificationRetentionDays,
                         WatchTasks = settings.WatchTasks
                     };
                     await _dbContext.UserSettings.AddAsync(toAdd);
@@ -170,6 +171,7 @@ namespace AiWebSiteWatchDog.Infrastructure.Persistence
                     existing.NotificationChannel = settings.NotificationChannel;
                     existing.TelegramBotToken = Encrypt(settings.TelegramBotToken);
                     existing.TelegramChatId = settings.TelegramChatId;
+                    existing.NotificationRetentionDays = settings.NotificationRetentionDays;
                 }
                 await _dbContext.SaveChangesAsync();
                 // After persistence, ensure plaintext token for runtime use

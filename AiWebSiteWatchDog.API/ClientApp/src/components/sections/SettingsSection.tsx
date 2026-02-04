@@ -41,7 +41,8 @@ export default function SettingsSection({
         senderName: base?.senderName || '',
         geminiApiUrl: base?.geminiApiUrl || '',
         notificationChannel: base?.notificationChannel || 'Email',
-        telegramChatId: base?.telegramChatId || null
+        telegramChatId: base?.telegramChatId || null,
+        notificationRetentionDays: base?.notificationRetentionDays || 30
       }
       await svcUpdateSettings(payload)
       const latest = await svcGetSettings()
@@ -52,7 +53,8 @@ export default function SettingsSection({
         geminiApiUrl: latest.geminiApiUrl || '',
         notificationChannel: latest.notificationChannel || 'Email',
         telegramBotToken: '',
-        telegramChatId: latest.telegramChatId || ''
+        telegramChatId: latest.telegramChatId || '',
+        notificationRetentionDays: latest.notificationRetentionDays || 30
       })
       await refreshAuthStatuses()
       if (onPartialSaved) await onPartialSaved()
@@ -73,6 +75,7 @@ export default function SettingsSection({
         senderName: base?.senderName || '',
         geminiApiUrl: url,
         notificationChannel: base?.notificationChannel || 'Email',
+        notificationRetentionDays: base?.notificationRetentionDays || 30,
         telegramChatId: base?.telegramChatId || null
       }
       await svcUpdateSettings(payload)
@@ -84,6 +87,7 @@ export default function SettingsSection({
         geminiApiUrl: latest.geminiApiUrl || '',
         notificationChannel: latest.notificationChannel || 'Email',
         telegramBotToken: '',
+        notificationRetentionDays: latest.notificationRetentionDays || 30,
         telegramChatId: latest.telegramChatId || ''
       })
       if (onPartialSaved) await onPartialSaved()
