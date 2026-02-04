@@ -15,7 +15,7 @@ export async function updateSettings(payload: SettingsForm): Promise<void> {
     notificationChannel: payload.notificationChannel ?? 'Email',
     telegramBotToken: payload.telegramBotToken ? payload.telegramBotToken : undefined,
     telegramChatId: payload.telegramChatId ? payload.telegramChatId : undefined,
-    notificationRetentionDays: payload.notificationRetentionDays || 30
+    notificationRetentionDays: payload.notificationRetentionDays ?? 30
   }
   const cleanBody = Object.fromEntries(
     Object.entries(body).filter(([, value]) => value !== undefined)
