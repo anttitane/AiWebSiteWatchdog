@@ -287,7 +287,15 @@ export default function NotificationSettingsCard({ settings, loaded, form, setFo
                 min="1"
                 max="365"
                 value={form.notificationRetentionDays || 30}
-                onChange={e => setForm(f => ({ ...f, notificationRetentionDays: parseInt(e.target.value) || 30 }))}
+                onChange={e => {
+                  const val = parseInt(e.target.value, 10);
+                  setForm(f => ({
+                    ...f,
+                    notificationRetentionDays: Number.isNaN(val)
+                      ? 30
+                      : Math.min(365, Math.max(1, val)),
+                  }));
+                }}
                 disabled={saving}
               />
               <span className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">Notifications older than this will be automatically deleted.</span>
